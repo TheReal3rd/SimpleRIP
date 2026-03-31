@@ -280,21 +280,21 @@ textarea{
         </div>
       </div>
       <div class="toolbar">
-        <input style="background:#FFFFFF;" type="color" value="#FFFFFF" name="1">
-        <input style="background:#FF2121;" type="color" value="#FF2121" name="2">
-        <input style="background:#FF93C4;" type="color" value="#FF93C4" name="3">  
-        <input style="background:#FF8135;" type="color" value="#FF8135" name="4">  
-        <input style="background:#FFF609;" type="color" value="#FFF609" name="5">  
-        <input style="background:#249CA3;" type="color" value="#249CA3" name="6">  
-        <input style="background:#78DC52;" type="color" value="#78DC52" name="7">  
-        <input style="background:#003FAD;" type="color" value="#003FAD" name="8">  
-        <input style="background:#87F2FF;" type="color" value="#87F2FF" name="9">  
-        <input style="background:#8E2EC4;" type="color" value="#8E2EC4" name="a">  
-        <input style="background:#A4839F;" type="color" value="#A4839F" name="b">  
-        <input style="background:#5C406C;" type="color" value="#5C406C" name="c">  
-        <input style="background:#E5CDC4;" type="color" value="#E5CDC4" name="d">  
-        <input style="background:#91463D;" type="color" value="#91463D" name="e">  
-        <input style="background:#000000;" type="color" value="#000000" name="f">
+        <input type="color" value="#FFFFFF" name="1">
+        <input type="color" value="#FF2121" name="2">
+        <input type="color" value="#FF93C4" name="3">  
+        <input type="color" value="#FF8135" name="4">  
+        <input type="color" value="#FFF609" name="5">  
+        <input type="color" value="#249CA3" name="6">  
+        <input type="color" value="#78DC52" name="7">  
+        <input type="color" value="#003FAD" name="8">  
+        <input type="color" value="#87F2FF" name="9">  
+        <input type="color" value="#8E2EC4" name="a">  
+        <input type="color" value="#A4839F" name="b">  
+        <input type="color" value="#5C406C" name="c">  
+        <input type="color" value="#E5CDC4" name="d">  
+        <input type="color" value="#91463D" name="e">  
+        <input type="color" value="#000000" name="f">
       </div>
 
     </div>
@@ -306,22 +306,37 @@ textarea{
   </div>
 <script>
 const palette = {
-  "1":[255,255,255],
-  "2":[255,33,33],
-  "3":[255,147,196],
-  "4":[255,129,53],
-  "5":[255,246,9],
-  "6":[36,156,163],
-  "7":[120,220,82],
-  "8":[0,63,173],
-  "9":[135,242,255],
-  "a":[142,46,196],
-  "b":[164,131,159],
-  "c":[92,64,108],
-  "d":[229,205,196],
-  "e":[145,70,61],
+  "1":[0,0,0],
+  "2":[0,0,0],
+  "3":[0,0,0],
+  "4":[0,0,0],
+  "5":[0,0,0],
+  "6":[0,0,0],
+  "7":[0,0,0],
+  "8":[0,0,0],
+  "9":[0,0,0],
+  "a":[0,0,0],
+  "b":[0,0,0],
+  "c":[0,0,0],
+  "d":[0,0,0],
+  "e":[0,0,0],
   "f":[0,0,0]
 };
+
+const hexToRGB = (hex) => {
+  let h = hex.slice(hex.startsWith('#') ? 1 : 0);
+  if (h.length === 3) h = [...h].map(x => x + x).join('');
+  return [ 
+  		   parseInt(h.slice(0, 2), 16), 
+           parseInt(h.slice(2, 4), 16), 
+           parseInt(h.slice(4, 6), 16)
+         ];
+};
+
+document.querySelectorAll('input[type="color"]').forEach(element => {
+	element.style.background = element.value;
+	palette[element.name] = hexToRGB(element.value);
+});
 
 const upload = document.getElementById('upload');
 const modeSelect = document.getElementById('mode');
@@ -707,11 +722,9 @@ copyBtn.addEventListener('click', async () => {
 
 document.addEventListener("input", function (event) {
     if (event.target.type === "color") {
-        const id = event.target.id;
-        const name = event.target.name;
         const value = event.target.value;
         event.target.style.background = value;
-        palette[name] = value;
+        palette[event.target.name] = value;
     }
 });
 
@@ -720,4 +733,3 @@ updateCanvasScale();
 </script>
 </body>
 </html>
-
