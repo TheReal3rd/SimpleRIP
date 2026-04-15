@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Python Web Terminal</title>
+
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+
+<!-- xterm.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+
+<style>
+  body {
+    margin: 0;
+    background: #0d1117;
+    color: white;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  #editor {
+    height: 40%;
+  }
+
+  #terminal {
+    height: 60%;
+  }
+
+  button {
+    background: #238636;
+    border: none;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #2ea043;
+  }
+</style>
+</head>
+
+<body>
+
+<button onclick="runCode()">▶ Run Python</button>
+
+<textarea id="editor">
+print("Hello from terminal!")
+print("Line 1\nLine 2\n\tIndented line")
+for i in range(3):
+    print("Number:", i)
+</textarea>
+
+<div id="terminal"></div>
+
+<!-- CodeMirror -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+
+<!-- xterm.js -->
+<script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+
+<!-- Pyodide -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+
+<script>
+let pyodide;
+let editor;
+let term;
+
+async function init() {
+  // Init terminal
+  term = new Terminal({
+    cursorBlink: true,
+    theme: {
+      background: "#0d1117",
+      foreground: "#c9d1d9"
+    }
+  });
+
+  term.open(document.getElementById("terminal"));
+  term.writeln("Python Web Terminal Ready 🚀");
+  term.write(">>> ");
+
+  // Init editor
+  editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+    mode: "python",
+    lineNumbers: true,
+    indentUnit: 4
+  });
+
+  // Load Python
+  pyodide = await loadPyodide();
+
+  term.writeln("\r\nPyodide loaded. Ready.\r\n");
+  term.write(">>> ");
+}
+
+// 🔥 Proper formatting handler
+function writeFormatted(text) {
+  // Normalize line endings
+  text = text.replace(/\r\n/g, "\n");
+
+  // Handle tabs
+  text = text.replace(/\t/g, "    ");
+
+  // Split lines and render correctly
+  const lines = text.split("\n");
+
+  lines.forEach((line, index) => {
+    term.write(line);
+    if (index < lines.length - 1) {
+      term.write("\r\n");
+    }
+  });
+}
+
+async function runCode() {
+  const code = editor.getValue();
+
+  term.write("\r\n>>> Running...\r\n");
+
+  try {
+    pyodide.setStdout({
+      batched: (text) => writeFormatted(text)
+    });
+
+    pyodide.setStderr({
+      batched: (text) => {
+        term.write("\x1b[31m"); // red
+        writeFormatted(text);
+        term.write("\x1b[0m"); // reset
+      }
+    });
+
+    await pyodide.runPythonAsync(code);
+
+    term.write("\r\n>>> Done.\r\n");
+  } catch (err) {
+    term.write("\r\n\x1b[31mError:\r\n" + err + "\x1b[0m\r\n");
+  }
+
+  term.write(">>> ");
+}
+
+init();
+</script>
+
+</body>
+</html>
