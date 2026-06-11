@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D JavaScript IDE</title>
+
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+
+<style>
+body {
+    margin: 0;
+    background: #272727;
+    color: white;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+div {
+    color: white;
+}
+
+header {
+    padding: 10px;
+    background: #272727;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+button {
+    background: #4c6ef5;
+    border: none;
+    padding: 8px 14px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    padding: 6px 10px;
+    font-size: 13px;
+    color: white;
+}
+
+#editor {
+    flex: 1;
+}
+
+#preview {
+    flex: 1;
+    border: none;
+    background: black;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div>3D JavaScript IDE</div>
+
+    <div style="display:flex; gap:10px;">
+        <button onclick="saveProject()">Save</button>
+        <button onclick="runCode()">Run ▶</button>
+    </div>
+</header>
+
+<div id="container">
+
+    <div class="panel">
+        <div class="title">Editor</div>
+        <div id="editor"></div>
+    </div>
+
+    <div class="panel">
+        <div class="title">3D Preview</div>
+        <iframe id="preview"></iframe>
+    </div>
+
+</div>
+
+<script>
+let editor;
+
+window.MonacoEnvironment = {
+    getWorkerUrl: function () {
+        return `data:text/javascript;charset=utf-8,
+        self.MonacoEnvironment = {
+            baseUrl:'https://unpkg.com/monaco-editor@latest/min/'
+        };
+        importScripts(
+        'https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js'
+        );`;
+    }
+};
+
+require.config({
+    paths: {
+        vs: 'https://unpkg.com/monaco-editor@latest/min/vs'
+    }
+});
+
+require(['vs/editor/editor.main'], function () {
+
+editor = monaco.editor.create(
+document.getElementById('editor'),
+{
+language: 'javascript',
+theme: 'vs-dark',
+fontSize: 14,
+automaticLayout: true,
+minimap: { enabled: false },
+
+value: `
+// Three.js example
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+);
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const cube = new THREE.Mesh(
+new THREE.BoxGeometry(),
+new THREE.MeshNormalMaterial()
+);
+
+scene.add(cube);
+
+camera.position.z = 3;
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+}
+
+animate();
+`
+});
+
+runCode();
+});
+
+function saveProject() {
+
+const blob = new Blob(
+[editor.getValue()],
+{type:"text/javascript"}
+);
+
+const link = document.createElement("a");
+
+link.href = URL.createObjectURL(blob);
+link.download = "project.js";
+
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+}
+
+function runCode() {
+
+const code = editor.getValue();
+
+const html = `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+margin:0;
+overflow:hidden;
+background:black;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+</head>
+
+<body>
+
+<script>
+${code}
+<\/script>
+
+</body>
+</html>
+`;
+
+document.getElementById("preview").srcdoc = html;
+}
+
+hashProjectLoad().then(result => {
+    editor.setValue(result)
+});
+
+function hashProjectLoad() {
+  let projectName = window.location.hash.substring(1);
+  let code = `name = input("Enter your name: ")
+print("Hello", name)
+
+age = input("Age? ")
+print("You are", age)`
+
+  if (!projectName) {
+    return Promise.resolve(code)
+  }
+
+  let file = "/pages/codeEmulators/ThreeSamples/"+ projectName + ".js";
+
+  return fetch(file)
+    .then(res => {
+      if (!res.ok) throw new Error("File not found");
+      return res.text();
+    })
+    .then(md => {
+      return md;
+    })
+    .catch(err => {
+      return code;
+    });
+}
+
+window.addEventListener("hashchange", hashProjectLoad);
+</script>
+
+</body>
+</html>
