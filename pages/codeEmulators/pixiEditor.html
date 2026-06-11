@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pixi.js IDE</title>
+
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+.title {
+    padding-left: 8px;
+    padding-bottom: 5px;
+}
+
+body {
+    margin: 0;
+    background: #272727;
+    color: #272727;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    padding: 10px;
+    background: #272727;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+div {
+    color: white;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+button {
+    background: #4c6ef5;
+    border: none;
+    padding: 8px 14px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+input[type="file"] {
+    color: white;
+}
+
+#container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-title {
+    padding: 6px 10px;
+    background: #272727;
+    font-size: 13px;
+    color: white;
+}
+
+#editor {
+    flex: 1;
+}
+
+#rightSplit {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#gameView {
+    flex: 1;
+    background: black;
+    overflow: hidden;
+}
+
+#terminal {
+    height: 40%;
+    padding: 10px;
+    background: #0b0d14;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.line {
+    display: flex;
+    align-items: center;
+}
+
+.prompt {
+    color: #7CFC98;
+    margin-right: 8px;
+}
+
+input.terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.log { color: #d4d4d4; }
+.error { color: #ff6b6b; }
+.warn { color: #ffd166; }
+.info { color: #7bdff2; }
+</style>
+</head>
+
+<body>
+
+<header>
+    <div>Pixi.js IDE (WIP)</div>
+
+    <div class="toolbar">
+    	
+    
+        <label>Upload:</label>
+        <input type="file" id="textFileInput" />
+		
+    	<button onclick="exportProject()">Export</button>
+        <button onclick="saveProject()">Save</button>
+        <button onclick="clearTerminal()">Clear</button>
+        <button onclick="stopCode()">Stop ⏹</button>
+        <button onclick="runCode()">Run ▶</button>
+    </div>
+</header>
+
+<div id="container">
+
+    <div class="panel">
+        <div class="panel-title">Editor</div>
+        <div id="editor"></div>
+    </div>
+
+    <div id="rightSplit">
+
+        <div class="panel-title">Game (PixiJS)</div>
+        <div id="gameView"></div>
+
+        <div class="panel-title">Console</div>
+        <div id="terminal"></div>
+
+    </div>
+
+</div>
+
+<script>
+let editor;
+let app;
+
+function stopCode() {
+	if(app){	
+		app.stop()
+    }
+}
+
+function initPixi() {
+
+    if (app) {
+        app.destroy(true);
+    }
+
+    app = new PIXI.Application({
+        resizeTo: document.getElementById('gameView'),
+        backgroundColor: 0x000000,
+        antialias: true
+    });
+
+    document.getElementById('gameView').innerHTML = '';
+    document.getElementById('gameView').appendChild(app.view);
+}
+
+window.MonacoEnvironment = {
+    getWorkerUrl: function () {
+        return `data:text/javascript;charset=utf-8,
+        importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');`;
+    }
+};
+
+require.config({
+    paths: {
+        vs: 'https://unpkg.com/monaco-editor@latest/min/vs'
+    }
+});
+
+const starterCode = `// PixiJS Emulator
+// Use: app, PIXI
+
+console.log("Game running");
+
+const box = new PIXI.Graphics();
+box.beginFill(0x4c6ef5);
+box.drawRect(0, 0, 80, 80);
+box.endFill();
+
+box.x = 150;
+box.y = 120;
+
+app.stage.addChild(box);
+
+app.ticker.add(() => {
+    box.rotation += 0.02;
+});
+`;
+
+function exportProject() {
+
+}
+
+function saveProject() {
+	const content = editor.getValue();
+
+    const blob = new Blob([content], {
+        type: 'text/javascript'
+    });
+
+    const link = document.createElement('a');
+
+    link.href = URL.createObjectURL(blob);
+    link.download = 'project.js';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function hashProjectLoad() {
+  let projectName = window.location.hash.substring(1);
+  let code = starterCode;
+
+  if (!projectName) {
+    return Promise.resolve(code)
+  }
+
+  let file = "/pages/codeEmulators/PixiJSSamples/"+ projectName + ".js";
+
+  return fetch(file)
+    .then(res => {
+      if (!res.ok) throw new Error("File not found");
+      return res.text();
+    })
+    .then(md => {
+      return md;
+    })
+    .catch(err => {
+      return code;
+    });
+}
+
+hashProjectLoad().then(result => {
+require(['vs/editor/editor.main'], function () {
+
+    editor = monaco.editor.create(document.getElementById('editor'), {
+        value: result,
+        language: 'javascript',
+        theme: 'vs-dark',
+        fontSize: 14,
+        automaticLayout: true,
+        minimap: { enabled: false }
+    });
+
+    editor.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+        () => runCode()
+    );
+});
+});
+
+function clearTerminal() {
+    document.getElementById('terminal').innerHTML = '';
+}
+
+function write(text, type = 'log') {
+    const term = document.getElementById('terminal');
+
+    const line = document.createElement('div');
+    line.className = type;
+
+    line.textContent = typeof text === 'object'
+        ? JSON.stringify(text, null, 2)
+        : String(text);
+
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+}
+
+async function runCode() {
+
+    clearTerminal();
+    initPixi();
+
+    const code = editor.getValue();
+
+    const sandbox = {
+        console: {
+            log: (...a) => write(a.join(' '), 'log'),
+            error: (...a) => write(a.join(' '), 'error'),
+            warn: (...a) => write(a.join(' '), 'warn'),
+            info: (...a) => write(a.join(' '), 'info')
+        },
+
+        PIXI,
+        app,
+        Math,
+        Date,
+        JSON,
+        Array,
+        Object,
+        String,
+        Number,
+        Boolean
+    };
+
+    try {
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+        const fn = new AsyncFunction(
+            ...Object.keys(sandbox),
+            code
+        );
+
+        await fn(...Object.values(sandbox));
+
+    } catch (err) {
+        write(err.stack || err.toString(), 'error');
+    }
+}
+
+document.getElementById('textFileInput').addEventListener('change', event => {
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => editor.setValue(e.target.result);
+    reader.readAsText(file);
+});
+
+window.addEventListener("hashchange", hashProjectLoad);
+initPixi();
+</script>
+
+</body>
+</html>

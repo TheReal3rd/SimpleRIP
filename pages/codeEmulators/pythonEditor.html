@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Python Web IDE</title>
+
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+<script src="/pages/codeEmulators/skulpt.min.js"></script>
+<script src="/pages/codeEmulators/skulpt-stdlib.js"></script>
+
+<style>
+body {
+    margin: 0;
+    background: #272727;
+    color: #272727;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+div {
+	color: white;
+}
+
+header {
+    padding: 10px;
+    background: #272727;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+button {
+    background: #4c6ef5;
+    border: none;
+    padding: 8px 14px;
+    color: white;
+   	border-radius: 6px;
+    cursor: pointer;
+}
+
+#container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    padding: 6px 10px;
+    background: #white;
+    font-size: 13px;
+    color: white;
+}
+
+#editor {
+    flex: 1;
+}
+
+#terminal {
+    flex: 1;
+    padding: 10px;
+    background: #0b0d14;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.line {
+    display: flex;
+}
+
+.prompt {
+    color: #7CFC98;
+    margin-right: 5px;
+}
+
+input.terminal-input {
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    flex: 1;
+    font-family: monospace;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div>Python Web IDE</div>
+    <div style="display:flex; gap:10px;">
+    	<label>Upload: </label>
+    	<input type="file" id="textFileInput">
+    	<button onclick="saveProject()">Save</button>
+        <button onclick="clearTerminal()">Clear</button>
+    	<button onclick="runCode()">Run ▶</button>
+    </div>
+</header>
+
+<div id="container">
+    <div class="panel">
+        <div class="title">Editor</div>
+        <div id="editor"></div>
+    </div>
+
+    <div class="panel">
+        <div class="title">Terminal</div>
+        <div id="terminal"></div>
+    </div>
+</div>
+
+<script>
+let editor;
+
+window.MonacoEnvironment = {
+    getWorkerUrl: function () {
+        return `data:text/javascript;charset=utf-8,
+        self.MonacoEnvironment = { baseUrl: 'https://unpkg.com/monaco-editor@latest/min/' };
+        importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');`;
+    }
+};
+
+require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@latest/min/vs' }});
+
+hashProjectLoad().then(result => {
+  
+require(['vs/editor/editor.main'], function () {
+    editor = monaco.editor.create(document.getElementById('editor'), {
+        value: result,
+        language: 'python',
+        theme: 'vs-dark',
+        fontSize: 14,
+        minimap: { enabled: false },
+        automaticLayout: true
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        runCode();
+    });
+});
+
+});
+
+function saveProject() {
+	const content = editor.getValue();
+    const fileName = "project.py";
+
+	var blob = new Blob([content], {type: "text.plain"});
+
+	var link = document.createElement("a");
+	link.href = URL.createObjectURL(blob);
+	link.download = fileName;
+
+	document.body.appendChild(link);
+	link.click();
+
+	document.body.removeChild(link);
+}
+
+function hashProjectLoad() {
+  let projectName = window.location.hash.substring(1);
+  let code = `name = input("Enter your name: ")
+print("Hello", name)
+
+age = input("Age? ")
+print("You are", age)`
+
+  if (!projectName) {
+    return Promise.resolve(code)
+  }
+
+  let file = "/pages/codeEmulators/PythonSamples/"+ projectName + ".py";
+
+  return fetch(file)
+    .then(res => {
+      if (!res.ok) throw new Error("File not found");
+      return res.text();
+    })
+    .then(md => {
+      return md;
+    })
+    .catch(err => {
+      return code;
+    });
+}
+
+function clearTerminal() {
+	document.getElementById("terminal").innerHTML = "";
+}
+
+function write(text) {
+    const term = document.getElementById("terminal");
+    term.innerHTML += text + "\n";
+    term.scrollTop = term.scrollHeight;
+}
+
+function inputTerminal(promptText) {
+    return new Promise(resolve => {
+        const term = document.getElementById("terminal");
+
+        const line = document.createElement("div");
+        line.className = "line";
+
+        const prompt = document.createElement("span");
+        prompt.className = "prompt";
+        prompt.textContent = promptText;
+
+        const input = document.createElement("input");
+        input.className = "terminal-input";
+
+        line.appendChild(prompt);
+        line.appendChild(input);
+        term.appendChild(line);
+
+        input.focus();
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const val = input.value;
+                input.disabled = true;
+                write(val);
+                resolve(val);
+            }
+        });
+    });
+}
+
+function builtinRead(x) {
+    if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+        throw "File not found: '" + x + "'";
+    return Sk.builtinFiles["files"][x];
+}
+
+async function runCode() {
+    const term = document.getElementById("terminal");
+    term.innerHTML = "";
+
+    Sk.configure({
+        output: write,
+        read: builtinRead,
+        inputfun: inputTerminal,
+        inputfunTakesPrompt: true
+    });
+
+    try {
+        await Sk.misceval.asyncToPromise(() =>
+            Sk.importMainWithBody("<stdin>", false, editor.getValue(), true)
+        );
+    } catch (e) {
+        write(e.toString());
+    }
+}
+
+document.getElementById('textFileInput').addEventListener('change', function(event) {
+		const file = event.target.files[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const text = e.target.result;
+				editor.setValue(text);
+		};
+		reader.readAsText(file);
+	}
+});
+
+window.addEventListener("hashchange", hashProjectLoad);
+</script>
+
+</body>
+</html>

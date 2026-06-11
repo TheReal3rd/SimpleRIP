@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JavaScript Web IDE</title>
+
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+.title {
+    padding-left: 8px;
+    padding-bottom: 5px;
+}
+
+body {
+    margin: 0;
+    background: #272727;
+    color: #272727;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    padding: 10px;
+    background: #272727;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+div {
+    color: white;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+button {
+    background: #4c6ef5;
+    border: none;
+    padding: 8px 14px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+input[type="file"] {
+    color: white;
+}
+
+#container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-title {
+    padding: 6px 10px;
+    background: #white;
+    font-size: 13px;
+    color: white;
+}
+
+#editor {
+    flex: 1;
+}
+
+#terminal {
+    flex: 1;
+    padding: 10px;
+    background: #0b0d14;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.line {
+    display: flex;
+    align-items: center;
+}
+
+.prompt {
+    color: #7CFC98;
+    margin-right: 8px;
+}
+
+input.terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.log {
+    color: #d4d4d4;
+}
+
+.error {
+    color: #ff6b6b;
+}
+
+.warn {
+    color: #ffd166;
+}
+
+.info {
+    color: #7bdff2;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div>JavaScript Web IDE</div>
+
+    <div class="toolbar">
+        <label>Upload:</label>
+        <input type="file" id="textFileInput" />
+
+        <button onclick="saveProject()">Save</button>
+        <button onclick="clearTerminal()">Clear</button>
+        <button onclick="runCode()">Run ▶</button>
+    </div>
+</header>
+
+<div id="container">
+
+    <div class="panel">
+        <div class="title">Editor</div>
+        <div id="editor"></div>
+    </div>
+
+    <div class="panel">
+        <div class="title">Console</div>
+        <div id="terminal"></div>
+    </div>
+
+</div>
+
+<script>
+let editor;
+
+// Monaco worker fix
+window.MonacoEnvironment = {
+    getWorkerUrl: function () {
+        return `data:text/javascript;charset=utf-8,
+        self.MonacoEnvironment = {
+            baseUrl: 'https://unpkg.com/monaco-editor@latest/min/'
+        };
+        importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');`;
+    }
+};
+
+require.config({
+    paths: {
+        vs: 'https://unpkg.com/monaco-editor@latest/min/vs'
+    }
+});
+
+const starterCode = `// JavaScript Web IDE
+// Ctrl + Enter to run
+
+console.log("Hello from the browser runtime");
+
+const numbers = [1, 2, 3, 4];
+
+const doubled = numbers.map(n => n * 2);
+
+console.log("Doubled:", doubled);
+
+async function loadData() {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve("Async operation complete");
+        }, 1000);
+    });
+}
+
+loadData().then(console.log);
+`;
+
+hashProjectLoad().then(result => {
+
+    require(['vs/editor/editor.main'], function () {
+
+        editor = monaco.editor.create(document.getElementById('editor'), {
+            value: result,
+            language: 'javascript',
+            theme: 'vs-dark',
+            fontSize: 14,
+            automaticLayout: true,
+            minimap: {
+                enabled: false
+            }
+        });
+
+        editor.addCommand(
+            monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+            () => runCode()
+        );
+    });
+});
+
+function saveProject() {
+    const content = editor.getValue();
+
+    const blob = new Blob([content], {
+        type: 'text/javascript'
+    });
+
+    const link = document.createElement('a');
+
+    link.href = URL.createObjectURL(blob);
+    link.download = 'project.js';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function hashProjectLoad() {
+
+    const projectName = window.location.hash.substring(1);
+
+    if (!projectName) {
+        return Promise.resolve(starterCode);
+    }
+
+    const file = '/pages/codeEmulators/JavascriptSamples/' + projectName + '.js';
+
+    return fetch(file)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error('File not found');
+            }
+
+            return res.text();
+        })
+        .catch(() => starterCode);
+}
+
+function clearTerminal() {
+    document.getElementById('terminal').innerHTML = '';
+}
+
+function write(text, type = 'log') {
+
+    const term = document.getElementById('terminal');
+
+    const line = document.createElement('div');
+    line.className = type;
+
+    if (typeof text === 'object') {
+        try {
+            line.textContent = JSON.stringify(text, null, 2);
+        } catch {
+            line.textContent = String(text);
+        }
+    } else {
+        line.textContent = String(text);
+    }
+
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+}
+
+function createPrompt(questionText = '') {
+
+    return new Promise(resolve => {
+
+        const term = document.getElementById('terminal');
+
+        const line = document.createElement('div');
+        line.className = 'line';
+
+        const prompt = document.createElement('span');
+        prompt.className = 'prompt';
+        prompt.textContent = questionText || '>';
+
+        const input = document.createElement('input');
+        input.className = 'terminal-input';
+
+        line.appendChild(prompt);
+        line.appendChild(input);
+
+        term.appendChild(line);
+
+        input.focus();
+
+        input.addEventListener('keydown', e => {
+
+            if (e.key === 'Enter') {
+
+                const value = input.value;
+
+                input.disabled = true;
+
+                resolve(value);
+            }
+        });
+
+        term.scrollTop = term.scrollHeight;
+    });
+}
+
+async function runCode() {
+
+    clearTerminal();
+
+    const code = editor.getValue();
+
+    const customConsole = {
+        log: (...args) => write(args.join(' '), 'log'),
+        error: (...args) => write(args.join(' '), 'error'),
+        warn: (...args) => write(args.join(' '), 'warn'),
+        info: (...args) => write(args.join(' '), 'info')
+    };
+
+    const sandbox = {
+        console: customConsole,
+
+        setTimeout,
+        setInterval,
+        clearTimeout,
+        clearInterval,
+
+        Promise,
+        Math,
+        Date,
+        JSON,
+        Array,
+        Object,
+        String,
+        Number,
+        Boolean,
+        RegExp,
+
+        fetch,
+
+        prompt: async (message = 'Input:') => {
+            return await createPrompt(message);
+        }
+    };
+
+    try {
+
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+        const fn = new AsyncFunction(
+            ...Object.keys(sandbox),
+            code
+        );
+
+        await fn(...Object.values(sandbox));
+
+    } catch (err) {
+
+        write(err.stack || err.toString(), 'error');
+    }
+}
+
+// File upload
+
+document.getElementById('textFileInput').addEventListener('change', event => {
+
+    const file = event.target.files[0];
+
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = e => {
+        editor.setValue(e.target.result);
+    };
+
+    reader.readAsText(file);
+});
+
+window.addEventListener('hashchange', async () => {
+
+    const code = await hashProjectLoad();
+
+    if (editor) {
+        editor.setValue(code);
+    }
+});
+</script>
+
+</body>
+</html>

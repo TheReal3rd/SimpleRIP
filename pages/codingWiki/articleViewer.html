@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Coding Wiki</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --link: #007bff;
+  --code-bg: #f4f4f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --text: #c9d1d9;
+    --link: #58a6ff;
+    --code-bg: #161b22;
+  }
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: auto;
+  max-width: 800px;
+  padding: 20px;
+}
+a {
+  color: var(--link);
+}
+pre {
+  background: var(--code-bg);
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+a {
+  background: #11151c;
+  color: white;
+  padding: 8px 12px;
+}
+  </style>
+</head>
+<body>
+
+<div id="content">Loading...</div>
+
+<script>
+function loadArticle() {
+  let article = window.location.hash.substring(1);
+
+  if (!article) {
+    article = "home";
+  }
+
+  let file = "/pages/codingWiki/articles/"+ article + ".md";
+
+  fetch(file)
+    .then(res => {
+      if (!res.ok) throw new Error("File not found");
+      return res.text();
+    })
+    .then(md => {
+      document.getElementById('content').innerHTML = marked.parse(md);
+    })
+    .catch(err => {
+      document.getElementById('content').innerHTML = "<h2>404 - Article not found</h2>";
+    });
+}
+
+loadArticle();
+window.addEventListener("hashchange", loadArticle);
+</script>
+
+</body>
+</html>
