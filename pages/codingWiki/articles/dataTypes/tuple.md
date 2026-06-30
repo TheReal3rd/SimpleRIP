@@ -1,3 +1,4 @@
+[Home](#home)
 # Tuple (Data Type)
 
 A tuple is a data type used to store multiple values in a single variable.
