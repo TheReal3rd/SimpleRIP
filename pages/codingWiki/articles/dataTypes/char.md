@@ -95,7 +95,7 @@ public class Main
 
 # References
 
-- [ASCII - Wikipedia](https://en.wikipedia.org/wiki/ASCII)
-- [ASCII Explained (YouTube)](https://www.youtube.com/watch?v=_9bAlgRzlkc)
-- [C++ Char Data Type - W3Schools](https://www.w3schools.com/cpp/cpp_data_types_char.asp)
-- [Character (Computing) - Wikipedia](https://en.wikipedia.org/wiki/Character_(computing))
+[ASCII - Wikipedia](https://en.wikipedia.org/wiki/ASCII)
+[ASCII Explained (YouTube)](https://www.youtube.com/watch?v=_9bAlgRzlkc)
+[C++ Char Data Type - W3Schools](https://www.w3schools.com/cpp/cpp_data_types_char.asp)
+[Character (Computing) - Wikipedia](https://en.wikipedia.org/wiki/Character_(computing))
