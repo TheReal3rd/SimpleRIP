@@ -8,6 +8,7 @@ Aim is to keep everything all in the browser and nothing touches my servers.
 * Add ComputerCraft image converter from my older projects.
 * Add a gif / animted mode to Arcade and ComputerCraft image converters.
 * Add further ide tools and complete any unfinished segments.
+* Create a Python that converts the wiki .md to a single .db with a viewer program. Aswell Linux and Windows executables.
 
 ## AI Usage Notice
 AI has been used to convert pages and or scripts from one programming language to another.
