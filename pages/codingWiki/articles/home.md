@@ -28,7 +28,7 @@ This will include casting and examples of these values being used.
 [Floating Point](#dataTypes/float)
 [String](#dataTypes/string)
 [Character](#dataTypes/char)
-[Arrays & Lists](#dataTypes/arrays)
+[Arrays & Lists](#dataTypes/array_lists)
 [Classes](#dataTypes/classes)
 [Tuple](#dataTypes/tuple)
 
