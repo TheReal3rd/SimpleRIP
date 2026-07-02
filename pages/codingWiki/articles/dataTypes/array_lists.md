@@ -103,6 +103,5 @@ To access the number `5`, you would use the row index followed by the column ind
 * Arrays are commonly used for storing collections of data and representing grids or game objects.
 
 # References
-
-* W3Schools – Python Lists: https://www.w3schools.com/python/python_lists.asp
-* Wikipedia – Array (data structure): https://en.wikipedia.org/wiki/Array_(data_structure)
+W3Schools – Python Lists: https://www.w3schools.com/python/python_lists.asp
+Wikipedia – Array (data structure): https://en.wikipedia.org/wiki/Array_(data_structure)
