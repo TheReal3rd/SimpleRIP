@@ -5,8 +5,8 @@
 <title>Python Web IDE</title>
 
 <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
-<script src="/pages/codeEmulators/skulpt.min.js"></script>
-<script src="/pages/codeEmulators/skulpt-stdlib.js"></script>
+<script src="/pages/codeEmulators/Libraries/skulpt.min.js"></script>
+<script src="/pages/codeEmulators/Libraries/skulpt-stdlib.js"></script>
 
 <style>
 body {
@@ -54,7 +54,6 @@ button {
 
 .title {
     padding: 6px 10px;
-    background: #white;
     font-size: 13px;
     color: white;
 }
@@ -130,22 +129,20 @@ window.MonacoEnvironment = {
 require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@latest/min/vs' }});
 
 hashProjectLoad().then(result => {
-  
-require(['vs/editor/editor.main'], function () {
-    editor = monaco.editor.create(document.getElementById('editor'), {
-        value: result,
-        language: 'python',
-        theme: 'vs-dark',
-        fontSize: 14,
-        minimap: { enabled: false },
-        automaticLayout: true
-    });
+    require(['vs/editor/editor.main'], function () {
+        editor = monaco.editor.create(document.getElementById('editor'), {
+            value: result,
+            language: 'python',
+            theme: 'vs-dark',
+            fontSize: 14,
+            minimap: { enabled: false },
+            automaticLayout: true
+        });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        runCode();
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+            runCode();
+        });
     });
-});
-
 });
 
 function saveProject() {

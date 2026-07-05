@@ -134,7 +134,7 @@ input.terminal-input {
 <body>
 
 <header>
-    <div>Pixi.js IDE (WIP)</div>
+    <div>Pixi.js IDE</div>
 
     <div class="toolbar">
     	
@@ -208,30 +208,6 @@ require.config({
     }
 });
 
-const starterCode = `// PixiJS Emulator
-// Use: app, PIXI
-
-console.log("Game running");
-
-const box = new PIXI.Graphics();
-box.beginFill(0x4c6ef5);
-box.drawRect(0, 0, 80, 80);
-box.endFill();
-
-box.x = 150;
-box.y = 120;
-
-app.stage.addChild(box);
-
-app.ticker.add(() => {
-    box.rotation += 0.02;
-});
-`;
-
-function exportProject() {
-
-}
-
 function saveProject() {
 	const content = editor.getValue();
 
@@ -251,7 +227,25 @@ function saveProject() {
 
 function hashProjectLoad() {
   let projectName = window.location.hash.substring(1);
-  let code = starterCode;
+  let code = `// PixiJS Emulator
+// Use: app, PIXI
+
+console.log("Game running");
+
+const box = new PIXI.Graphics();
+box.beginFill(0x4c6ef5);
+box.drawRect(0, 0, 80, 80);
+box.endFill();
+
+box.x = 150;
+box.y = 120;
+
+app.stage.addChild(box);
+
+app.ticker.add(() => {
+    box.rotation += 0.02;
+});
+`;
 
   if (!projectName) {
     return Promise.resolve(code)
@@ -273,22 +267,22 @@ function hashProjectLoad() {
 }
 
 hashProjectLoad().then(result => {
-require(['vs/editor/editor.main'], function () {
+    require(['vs/editor/editor.main'], function () {
 
-    editor = monaco.editor.create(document.getElementById('editor'), {
-        value: result,
-        language: 'javascript',
-        theme: 'vs-dark',
-        fontSize: 14,
-        automaticLayout: true,
-        minimap: { enabled: false }
+        editor = monaco.editor.create(document.getElementById('editor'), {
+            value: result,
+            language: 'javascript',
+            theme: 'vs-dark',
+            fontSize: 14,
+            automaticLayout: true,
+            minimap: { enabled: false }
+        });
+
+        editor.addCommand(
+            monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+            () => runCode()
+        );
     });
-
-    editor.addCommand(
-        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-        () => runCode()
-    );
-});
 });
 
 function clearTerminal() {
@@ -360,6 +354,49 @@ document.getElementById('textFileInput').addEventListener('change', event => {
     reader.onload = e => editor.setValue(e.target.result);
     reader.readAsText(file);
 });
+
+
+function exportProject() {
+    const content = editor.getValue();
+
+    const templatePage = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Export PixiJS</title>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"><\/script>
+</head>
+<body style="margin:0; overflow:hidden; background:#000;">
+  <script>
+    const app = new PIXI.Application({
+      resizeTo: window,
+      backgroundColor: 0x000000,
+      antialias: true
+    });
+
+    document.body.appendChild(app.view);
+
+    ${content}
+  <\/script>
+</body>
+</html>`;
+
+    const blob = new Blob([templatePage], {
+        type: "text/html"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "export.html";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
 
 window.addEventListener("hashchange", hashProjectLoad);
 initPixi();

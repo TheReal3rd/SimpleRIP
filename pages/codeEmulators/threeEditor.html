@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3D JavaScript IDE</title>
+<title>Three.js IDE</title>
 
 <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
 
@@ -71,7 +71,7 @@ button {
 <body>
 
 <header>
-    <div>3D JavaScript IDE</div>
+    <div>Three.js IDE</div>
 
     <div style="display:flex; gap:10px;">
         <button onclick="saveProject()">Save</button>
@@ -114,18 +114,70 @@ require.config({
     }
 });
 
-require(['vs/editor/editor.main'], function () {
+function saveProject() {
+    const blob = new Blob([editor.getValue()], {type:"text/javascript"});
 
-editor = monaco.editor.create(
-document.getElementById('editor'),
-{
-language: 'javascript',
-theme: 'vs-dark',
-fontSize: 14,
-automaticLayout: true,
-minimap: { enabled: false },
+    const link = document.createElement("a");
 
-value: `
+    link.href = URL.createObjectURL(blob);
+    link.download = "project.js";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function runCode() {
+    const code = editor.getValue();
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+    body{
+    margin:0;
+    overflow:hidden;
+    background:black;
+    }
+    </style>
+
+    <script src="/pages/codeEmulators/Libraries/three.js"><\/script>
+    </head>
+
+    <body>
+
+    <script>
+    ${code}
+    <\/script>
+
+    </body>
+    </html>
+    `;
+
+    document.getElementById("preview").srcdoc = html;
+}
+
+hashProjectLoad().then(result => {
+    require(['vs/editor/editor.main'], function () {
+        editor = monaco.editor.create(
+        document.getElementById('editor'), {
+            language: 'javascript',
+            theme: 'vs-dark',
+            fontSize: 14,
+            automaticLayout: true,
+            minimap: { enabled: false },
+
+            value: result
+        });
+
+        runCode();
+    });
+});
+
+function hashProjectLoad() {
+  let projectName = window.location.hash.substring(1);
+  let code = `
 // Three.js example
 
 const scene = new THREE.Scene();
@@ -161,77 +213,12 @@ function animate() {
 
 animate();
 `
-});
-
-runCode();
-});
-
-function saveProject() {
-
-const blob = new Blob(
-[editor.getValue()],
-{type:"text/javascript"}
-);
-
-const link = document.createElement("a");
-
-link.href = URL.createObjectURL(blob);
-link.download = "project.js";
-
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-}
-
-function runCode() {
-
-const code = editor.getValue();
-
-const html = `
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-body{
-margin:0;
-overflow:hidden;
-background:black;
-}
-</style>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
-</head>
-
-<body>
-
-<script>
-${code}
-<\/script>
-
-</body>
-</html>
-`;
-
-document.getElementById("preview").srcdoc = html;
-}
-
-hashProjectLoad().then(result => {
-    editor.setValue(result)
-});
-
-function hashProjectLoad() {
-  let projectName = window.location.hash.substring(1);
-  let code = `name = input("Enter your name: ")
-print("Hello", name)
-
-age = input("Age? ")
-print("You are", age)`
 
   if (!projectName) {
     return Promise.resolve(code)
   }
 
-  let file = "/pages/codeEmulators/ThreeSamples/"+ projectName + ".js";
+  let file = "/pages/codeEmulators/ThreeSamples/"+ projectName;
 
   return fetch(file)
     .then(res => {
