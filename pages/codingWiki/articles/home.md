@@ -10,16 +10,16 @@ __This is still a work in progress project.__
 
 ---
 
-# Calculations:
+## Calculations:
 
 This section is dedicated to calculations.
 
 [Distance](#distanceCalcs/distanceHome)
-[Angle](#home)
+[Angle](#angleCalcs/angleHome)
 
 ---
 
-# Common Data Types:
+## Common Data Types:
 
 This section is dedicated to data types and to explain what and how these values work.
 This will include casting and examples of these values being used.
@@ -29,14 +29,47 @@ This will include casting and examples of these values being used.
 [String](#dataTypes/string)
 [Character](#dataTypes/char)
 [Arrays & Lists](#dataTypes/array_lists)
-[Classes](#dataTypes/classes)
+[Classes](#dataTypes/classes) 
 [Tuple](#dataTypes/tuple)
 
 ---
 
-# Data Type Objects:
+### Data Type Objects:
 
 This section is dedicated to custom but commonly used data type / objects.
-Please learn how classes work first before deep diving thing this section.
+Please learn how classes work first before deep diving into things like this section.
 
 [Vector](#dataTypes/vector)
+[Quaternions](#home)
+[Colors](#home)
+[Matrices](#home)
+[Entities](#home)
+[State Machines](#home)
+
+## Compilers and interpreters (TODO)
+
+## Computer Memory (TODO)
+
+## Operations and Expressions (TODO)
+
+## Boolean Logic (TODO)
+
+## Control Flow (TODO)
+
+## Functions (TODO)
+
+## Errors and Debugging (TODO)
+
+## Algorithms and Efficiency (TODO)
+
+## Paradigms (TODO)
+
+This section will be dedicated to programming paradigms which are different styles or approchas to writting and orginizing programs.
+
+Each paradigm offers a different way of thinking about problem solving and software design.
+
+[Procedural / Imperative](#home)
+[Functional](#home)
+[Object Oriented](#home) 
+[Event Driven](#home)
+[Declarative](#home)

@@ -1,5 +1,5 @@
 [Home](#home)
-
+[Distance Home](#distanceCalc/distanceHome)
 # Chebyshev Distance (WIP)
 
 Checbyshev is a distance calculation that returns the distance between two points of the maxiumum absolute difference along a single dimension.

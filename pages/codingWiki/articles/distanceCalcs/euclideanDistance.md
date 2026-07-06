@@ -1,5 +1,5 @@
 [Home](#home)
-
+[Distance Home](#distanceCalc/distanceHome)
 # Euclidean Distance
 
 Euclidean distance is a traditional distance measurement that provides the direct distance between two points.

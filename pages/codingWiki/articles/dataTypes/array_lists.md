@@ -94,14 +94,6 @@ To access the number `5`, you would use the row index followed by the column ind
 * Storing collections of related data, such as names, scores, or temperatures.
 * Processing large amounts of data efficiently using loops.
 
-## Summary
-
-* Arrays and lists store multiple values in a single variable.
-* Values are accessed using an **index**.
-* Most programming languages use **zero-based indexing**, meaning the first element is at index `0`.
-* Some languages use **fixed-size arrays**, while others provide **dynamic lists** that can grow or shrink.
-* Arrays are commonly used for storing collections of data and representing grids or game objects.
-
 # References
-W3Schools – Python Lists: https://www.w3schools.com/python/python_lists.asp
-Wikipedia – Array (data structure): https://en.wikipedia.org/wiki/Array_(data_structure)
+[W3Schools Python Lists](https://www.w3schools.com/python/python_lists.asp)
+[Wikipedia – Array](https://en.wikipedia.org/wiki/Array_(data_structure))

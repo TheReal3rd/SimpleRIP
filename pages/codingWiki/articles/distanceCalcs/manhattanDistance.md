@@ -1,4 +1,5 @@
 [Home](#home)
+[Distance Home](#distanceCalc/distanceHome)
 # Manhattan Distance
 Manhattan distance is a calculation that measures the distance between two points in a grid, using the absolute differences of their coordinates. 
 Unlike Euclidian distances, which calculate the direct path between two point, Manhattan distance is commonly used to calculate distances within a grid for scenarios such as games that use grid-based systems, 
