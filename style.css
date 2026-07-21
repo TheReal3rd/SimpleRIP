@@ -8,6 +8,29 @@ body{
     min-height:100vh;
 }
 
+html {
+    margin:0;
+    height:100%;
+}
+
+body{
+    background:
+    linear-gradient(#001b029c 1px,transparent 1px),
+    linear-gradient(90deg,#001b029c 1px,transparent 1px), #000000;
+
+    background-size:60px 60px;
+    animation:gridmove 15s linear infinite;
+}
+
+@keyframes gridmove{
+    from{
+        background-position:0 0;
+    }
+    to{
+        background-position:600px 800px;
+    }
+}
+
 header{
     text-align:center;
     padding:25px;
@@ -17,10 +40,9 @@ header{
 
 main{
     flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:40px 20px;
+    width:min(1000px,90%);
+    margin:0 auto;
+    padding:40px 0 120px;
 }
 
 .subtitle{
@@ -30,26 +52,87 @@ main{
 
 .button-container{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(160px,1fr));
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     gap:15px;
-    width:80%;
-    max-width:900px;
-    padding-bottom:200px;
+}
+
+.tool-group{
+    margin-bottom:45px;
+}
+
+.tool-group h2{
+    margin:0 0 18px;
+    font-size:1.25rem;
+    font-weight:normal;
+    color:white;
 }
 
 button{
-    padding:14px;
-    background:transparent;
-    border:2px solid white;
-    color:white;
+    position:relative;
+
+    width:100%;
+
+    padding:14px 18px;
+
+    background:#000;
+    color:#fff;
+
+    border:2px solid #fff;
+    border-radius:4px;
+
     font-size:1rem;
+
     cursor:pointer;
-    transition:0.2s;
+
+    transition:
+        background .2s,
+        color .2s,
+        transform .15s;
 }
 
 button:hover{
-    background:white;
-    color:black;
+    background:#fff;
+    color:#000;
+    transform:translateY(-2px);
+}
+
+button:active{
+    transform:translateY(0);
+}
+
+button::after{
+
+    content:attr(data-tooltip);
+
+    position:absolute;
+
+    bottom:calc(100% + 10px);
+    left:50%;
+
+    transform:translateX(-50%);
+
+    background:#111;
+    color:#fff;
+
+    border:1px solid #fff;
+
+    padding:6px 10px;
+
+    border-radius:4px;
+
+    font-size:12px;
+
+    white-space:nowrap;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    transition:opacity .2s;
+}
+
+button:hover::after{
+    opacity:1;
 }
 
 footer{

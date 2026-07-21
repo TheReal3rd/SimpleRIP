@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel IDE</title>
+    <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #1e1e1e;
+        color: white;
+        font-family: monospace;
+        display: flex;
+        height: 100vh;
+      }
+
+      #sidebar {
+        width: 40%;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #444;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        background: #2d2d2d;
+      }
+
+      button {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 18px;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      #editor {
+        flex: 1;
+      }
+
+      #canvasContainer {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #111;
+      }
+
+      canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        border: 2px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <header>
+        <div>Pixel IDE</div>
+        <button onclick="run()"> Run ▶ </button>
+      </header>
+      <div id="editor"></div>
+    </div>
+    <div id="canvasContainer">
+      <canvas id="screen"></canvas>
+    </div>
+    <script>
+      let editor;
+      window.MonacoEnvironment = {
+        getWorkerUrl() {
+          return `data:text/javascript;charset=utf-8,
+        self.MonacoEnvironment={
+            baseUrl:'https://unpkg.com/monaco-editor@latest/min/'
+        };
+        importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');`;
+        }
+      };
+      require.config({
+        paths: {
+          vs: 'https://unpkg.com/monaco-editor@latest/min/vs'
+        }
+      });
+      const WIDTH = 128;
+      const HEIGHT = 128;
+      const SCALE = 5;
+      const canvas = document.getElementById("screen");
+      canvas.width = WIDTH;
+      canvas.height = HEIGHT;
+      canvas.style.width = WIDTH * SCALE + "px";
+      canvas.style.height = HEIGHT * SCALE + "px";
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+
+      function clear(color = "black") {
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      }
+
+      function pixel(x, y, color = "white") {
+        x |= 0;
+        y |= 0;
+        if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) return;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      function line(x0, y0, x1, y1, color = "white") {
+        x0 |= 0;
+        y0 |= 0;
+        x1 |= 0;
+        y1 |= 0;
+        let dx = Math.abs(x1 - x0);
+        let sx = x0 < x1 ? 1 : -1;
+        let dy = -Math.abs(y1 - y0);
+        let sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy;
+        while (true) {
+          pixel(x0, y0, color);
+          if (x0 === x1 && y0 === y1) break;
+          let e2 = err * 2;
+          if (e2 >= dy) {
+            err += dy;
+            x0 += sx;
+          }
+          if (e2 <= dx) {
+            err += dx;
+            y0 += sy;
+          }
+        }
+      }
+
+      function rect(x, y, w, h, color) {
+        line(x, y, x + w, y, color);
+        line(x + w, y, x + w, y + h, color);
+        line(x + w, y + h, x, y + h, color);
+        line(x, y + h, x, y, color);
+      }
+
+      function fillRect(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+      }
+
+      function circle(cx, cy, r, color) {
+        let x = r;
+        let y = 0;
+        let err = 0;
+        while (x >= y) {
+          pixel(cx + x, cy + y, color);
+          pixel(cx + y, cy + x, color);
+          pixel(cx - y, cy + x, color);
+          pixel(cx - x, cy + y, color);
+          pixel(cx - x, cy - y, color);
+          pixel(cx - y, cy - x, color);
+          pixel(cx + y, cy - x, color);
+          pixel(cx + x, cy - y, color);
+          y++;
+          if (err <= 0) {
+            err += 2 * y + 1;
+          } else {
+            x--;
+            err -= 2 * x + 1;
+          }
+        }
+      }
+
+      function fillCircle(cx, cy, r, color) {
+        for (let y = -r; y <= r; y++) {
+          for (let x = -r; x <= r; x++) {
+            if (x * x + y * y <= r * r) {
+              pixel(cx + x, cy + y, color);
+            }
+          }
+        }
+      }
+    const FONT = { // May god have mercy upon my soul.
+        // Letters
+        "A":["010","101","111","101","101"],
+        "B":["110","101","110","101","110"],
+        "C":["011","100","100","100","011"],
+        "D":["110","101","101","101","110"],
+        "E":["111","100","110","100","111"],
+        "F":["111","100","110","100","100"],
+        "G":["011","100","101","101","011"],
+        "H":["101","101","111","101","101"],
+        "I":["111","010","010","010","111"],
+        "J":["001","001","001","101","010"],
+        "K":["101","101","110","101","101"],
+        "L":["100","100","100","100","111"],
+        "M":["101","111","111","101","101"],
+        "N":["101","111","111","111","101"],
+        "O":["111","101","101","101","111"],
+        "P":["110","101","110","100","100"],
+        "Q":["111","101","101","111","001"],
+        "R":["110","101","110","101","101"],
+        "S":["011","100","111","001","110"],
+        "T":["111","010","010","010","010"],
+        "U":["101","101","101","101","111"],
+        "V":["101","101","101","101","010"],
+        "W":["101","101","111","111","101"],
+        "X":["101","101","010","101","101"],
+        "Y":["101","101","010","010","010"],
+        "Z":["111","001","010","100","111"],
+
+        // Numbers
+        "0":["111","101","101","101","111"],
+        "1":["010","110","010","010","111"],
+        "2":["111","001","111","100","111"],
+        "3":["111","001","111","001","111"],
+        "4":["101","101","111","001","001"],
+        "5":["111","100","111","001","111"],
+        "6":["111","100","111","101","111"],
+        "7":["111","001","010","100","100"],
+        "8":["111","101","111","101","111"],
+        "9":["111","101","111","001","111"],
+
+        // Symbols
+        " ":["000","000","000","000","000"],
+        ".":["000","000","000","000","010"],
+        ",":["000","000","000","010","100"],
+        ":":["000","010","000","010","000"],
+        ";":["000","010","000","010","100"],
+        "!":["010","010","010","000","010"],
+        "?":["111","001","011","000","010"],
+        "+":["000","010","111","010","000"],
+        "-":["000","000","111","000","000"],
+        "*":["101","010","111","010","101"],
+        "/":["001","001","010","100","100"],
+        "\\":["100","100","010","001","001"],
+        "=":["000","111","000","111","000"],
+        "_":["000","000","000","000","111"],
+        "#":["101","111","101","111","101"],
+        "%":["101","001","010","100","101"],
+        "@":["111","101","111","100","111"],
+        "$":["111","110","111","011","111"],
+        "&":["010","101","010","101","111"],
+        "(":["001","010","010","010","001"],
+        ")":["100","010","010","010","100"],
+        "[":["110","100","100","100","110"],
+        "]":["011","001","001","001","011"],
+        "<":["001","010","100","010","001"],
+        ">":["100","010","001","010","100"],
+        "\"":["101","101","000","000","000"],
+        "'":["010","010","000","000","000"],
+        "^":["010","101","000","000","000"],
+        "~":["000","011","110","000","000"]
+
+    };
+
+      function text(x, y, str, color = "white") {
+        str = str.toUpperCase();
+        for (const ch of str) {
+          const glyph = FONT[ch];
+          if (!glyph) {
+            x += 4;
+            continue;
+          }
+          for (let gy = 0; gy < glyph.length; gy++) {
+            for (let gx = 0; gx < glyph[gy].length; gx++) {
+              if (glyph[gy][gx] == "1") {
+                pixel(x + gx, y + gy, color);
+              }
+            }
+          }
+          x += 4;
+        }
+      }
+      const keys = {};
+      window.addEventListener("keydown", e => keys[e.key] = true);
+      window.addEventListener("keyup", e => keys[e.key] = false);
+      const mouse = {
+        x: 0,
+        y: 0,
+        left: false
+      };
+      canvas.addEventListener("mousemove", e => {
+        const r = canvas.getBoundingClientRect();
+        mouse.x = ((e.clientX - r.left) / SCALE) | 0;
+        mouse.y = ((e.clientY - r.top) / SCALE) | 0;
+      });
+      canvas.addEventListener("mousedown",
+        () => mouse.left = true);
+      canvas.addEventListener("mouseup",
+        () => mouse.left = false);
+      let deltaTime = 0;
+      const gfx = {
+        width: WIDTH,
+        height: HEIGHT,
+        pixel,
+        line,
+        rect,
+        fillRect,
+        circle,
+        fillCircle,
+        clear,
+        text,
+        mouse,
+        deltaTime: 0,
+        keyDown(key) {
+          return !!keys[key];
+        }
+      };
+      let animationId = null;
+      let drawFunction = null;
+      let lastTime = 0;
+      let userInstance = null;
+      gfx.start = function(draw) {
+        drawFunction = draw;
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+        }
+        lastTime = performance.now();
+
+        function frame(time) {
+          deltaTime = (time - lastTime) / 1000;
+          lastTime = time;
+          gfx.deltaTime = deltaTime;
+          if (drawFunction) {
+            drawFunction();
+          }
+          animationId = requestAnimationFrame(frame);
+        }
+        animationId = requestAnimationFrame(frame);
+      };
+      gfx.stop = function() {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+      };
+
+      function run() {
+        gfx.stop();
+        clear("#000");
+        try {
+          const code = editor.getValue();
+          const fn = new Function("gfx", `
+            ${code}
+
+            return {
+
+                draw:
+                    typeof draw==="function"
+                    ? draw
+                    : null
+
+            };
+            `);
+          userInstance = fn(gfx);
+          if (userInstance.draw) {
+            gfx.start(userInstance.draw);
+          }
+        } catch (err) {
+          console.error(err);
+          clear("#330000");
+          ctx.fillStyle = "white";
+          ctx.font = "10px monospace";
+          ctx.fillText("Runtime Error", 4, 12);
+        }
+      }
+      const starter = `
+
+let angle = 0;
+
+function draw(){
+
+    gfx.clear("#111");
+
+    gfx.text(4,4,"A0B1","white");
+
+    gfx.circle(64 + Math.cos(angle) * 30, 64 + Math.sin(angle) * 30, 8, "cyan");
+
+    gfx.line(64,64,gfx.mouse.x,gfx.mouse.y,"yellow");
+
+    if(gfx.keyDown("ArrowLeft")){
+        angle -= 3 * gfx.deltaTime;
+
+    }
+
+    if(gfx.keyDown("ArrowRight")){
+        angle += 3 * gfx.deltaTime;
+
+    }
+
+    if(gfx.mouse.left){
+        gfx.fillCircle(gfx.mouse.x, gfx.mouse.y, 2, "red");
+
+    }
+
+}
+
+
+/*
+
+========================================================
+PIXEL IDE API
+========================================================
+
+Canvas
+------
+
+gfx.width
+    Canvas width in pixels.
+
+gfx.height
+    Canvas height in pixels.
+
+
+Animation
+---------
+
+gfx.start(draw)
+
+    Starts the animation loop.
+
+    Parameters:
+        draw()  Function called every frame.
+
+
+gfx.stop()
+
+    Stops the animation loop.
+
+
+gfx.deltaTime
+
+    Seconds elapsed since the previous frame.
+
+
+Drawing
+-------
+
+gfx.clear(color = "black")
+
+    Clears the screen.
+
+    Parameters:
+        color    CSS color string
+
+
+gfx.pixel(x, y, color = "white")
+
+    Draws one pixel.
+
+    Parameters:
+        x
+        y
+        color
+
+
+gfx.line(x1, y1, x2, y2, color = "white")
+
+    Draws a line.
+
+    Parameters:
+        x1
+        y1
+        x2
+        y2
+        color
+
+
+gfx.rect(x, y, width, height, color = "white")
+
+    Draws an outlined rectangle.
+
+    Parameters:
+        x
+        y
+        width
+        height
+        color
+
+
+gfx.fillRect(x, y, width, height, color = "white")
+
+    Draws a filled rectangle.
+
+    Parameters:
+        x
+        y
+        width
+        height
+        color
+
+
+gfx.circle(x, y, radius, color = "white")
+
+    Draws an outlined circle.
+
+    Parameters:
+        x
+        y
+        radius
+        color
+
+
+gfx.fillCircle(x, y, radius, color = "white")
+
+    Draws a filled circle.
+
+    Parameters:
+        x
+        y
+        radius
+        color
+
+
+gfx.text(x, y, text, color = "white")
+
+    Draws bitmap text.
+
+    Parameters:
+        x
+        y
+        text
+        color
+
+
+Input
+-----
+
+gfx.mouse.x
+
+    Mouse X position.
+
+
+gfx.mouse.y
+
+    Mouse Y position.
+
+
+gfx.mouse.left
+
+    True while the left mouse button is held.
+
+
+gfx.keyDown(key)
+
+    Returns true if the key is currently pressed.
+
+    Parameters:
+        key
+
+    Examples:
+
+        gfx.keyDown("ArrowLeft")
+        gfx.keyDown("ArrowRight")
+        gfx.keyDown("ArrowUp")
+        gfx.keyDown("ArrowDown")
+        gfx.keyDown(" ")
+        gfx.keyDown("a")
+
+
+Example
+-------
+
+let x = 10;
+
+function draw(){
+
+    gfx.clear("#111");
+
+    gfx.fillCircle(x, 40, 5, "cyan");
+
+    if(gfx.keyDown("ArrowRight"))
+        x += 60 * gfx.deltaTime;
+
+    if(gfx.keyDown("ArrowLeft"))
+        x -= 60 * gfx.deltaTime;
+
+}
+
+gfx.start(draw);
+
+========================================================
+
+*/
+
+`;
+      require(
+        ["vs/editor/editor.main"],
+        function() {
+          editor = monaco.editor.create(document.getElementById("editor"), {
+            value: starter,
+            language: "javascript",
+            theme: "vs-dark",
+            automaticLayout: true,
+            minimap: {
+              enabled: false
+            },
+            fontSize: 14
+          });
+          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+            () => run());
+          run();
+        });
+    </script>
+  </body>
+</html>

@@ -23,7 +23,6 @@ GET OUT!
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simple.rip</title>
 <link rel="stylesheet" href="./style.css">
-
 </head>
 
 <body>
@@ -33,30 +32,87 @@ simple.rip
 </header>
 
 <main>
-
 <div class="subtitle">
-Keep It Simple Stupid!
+    Keep It Simple Stupid!
 </div>
 
-<div class="button-container">
-<h2> Image Tools </h2>
-<button onclick="window.location.href='/pages/ImageToArcade.html'">Arcade Converter</button>
-<button onclick="window.location.href='/pages/ImageToCC.html'">Computer Craft Converter</button>
-</div>
+<section class="tool-group">
 
-<div class="button-container">
-<h2> Web IDE's </h2>
-<button onclick="window.location.href='/pages/codeEmulators/pythonEditor.html'">Python</button>
-<button onclick="window.location.href='/pages/codeEmulators/javascriptEditor.html'">Javascript</button>
-<button onclick="window.location.href='/pages/codeEmulators/pixiEditor.html'">Pixi.js</button>
-<button onclick="window.location.href='/pages/codeEmulators/threeEditor.html'">Three.js</button>
-</div>
+    <h2>Image Tools</h2>
 
-<div class="button-container">
-<h2> Wiki's and Links </h2>
-<button onclick="window.location.href='/pages/codingWiki/articleViewer.html'">Coding Wiki (WIP)</button>
-</div>
+    <div class="button-container">
 
+        <button
+            data-tooltip="Convert images into retro arcade sprites."
+            onclick="window.location.href='/pages/ImageToArcade.html'">
+            Arcade Converter
+        </button>
+
+        <button
+            data-tooltip="Convert images for ComputerCraft."
+            onclick="window.location.href='/pages/ImageToCC.html'">
+            ComputerCraft Converter
+        </button>
+
+    </div>
+
+</section>
+
+<section class="tool-group">
+
+    <h2>Web IDEs</h2>
+
+    <div class="button-container">
+
+        <button
+            data-tooltip="Online Python editor."
+            onclick="window.location.href='/pages/codeEmulators/pythonEditor.html'">
+            Python
+        </button>
+
+        <button
+            data-tooltip="Online JavaScript editor."
+            onclick="window.location.href='/pages/codeEmulators/javascriptEditor.html'">
+            JavaScript
+        </button>
+
+        <button
+            data-tooltip="Pixi.js rendering playground."
+            onclick="window.location.href='/pages/codeEmulators/pixiEditor.html'">
+            Pixi.js
+        </button>
+
+        <button
+            data-tooltip="Three.js 3D editor."
+            onclick="window.location.href='/pages/codeEmulators/threeEditor.html'">
+            Three.js
+        </button>
+
+        <button
+            data-tooltip="Pixel canvas editor."
+            onclick="window.location.href='/pages/codeEmulators/javascriptCanvasEditor.html'">
+            Pixel.js
+        </button>
+
+    </div>
+
+</section>
+
+<section class="tool-group">
+
+    <h2>Wikis & Links</h2>
+
+    <div class="button-container">
+
+        <button
+            data-tooltip="Programming wiki and documentation."
+            onclick="window.location.href='/pages/codingWiki/articleViewer.html'">
+            Coding Wiki (WIP)
+        </button>
+
+    </div>
+
+</section>
 </main>
 
 <footer>
