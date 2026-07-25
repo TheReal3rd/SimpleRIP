@@ -1,0 +1,427 @@
+<!---
+Purly AI generated. Just was an idea. I wanna play around with.
+
+--->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini Music Lab</title>
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1e1e1e;color:#ddd;font-family:system-ui,sans-serif;font-size:14px}
+header{display:flex;gap:10px;align-items:center;padding:10px;background:#2b2b2b;flex-wrap:wrap;border-bottom:1px solid #3a3a3a}
+main{padding:12px;max-width:980px;margin:0 auto;height:calc(100% - 52px);overflow:auto}
+button,input{font:inherit;padding:6px 10px;background:#333;color:#ddd;border:1px solid #555;border-radius:4px}
+button{cursor:pointer}button:hover{background:#444}
+section{background:#252526;border-radius:6px;padding:12px;margin-bottom:12px}
+h2{margin:0 0 8px;font-size:15px;font-weight:600;color:#ccc}
+.hint{color:#888;font-size:12px;margin:0 0 8px}
+.keys{font-family:ui-monospace,monospace;width:100%;min-height:88px;resize:vertical;line-height:1.45;background:#1e1e1e;color:#ddd;border:1px solid #444;padding:8px;border-radius:4px}
+.ch-head{display:grid;grid-template-columns:72px 1fr 28px;gap:8px;font-size:12px;color:#888;margin-bottom:4px}
+.ch-row{display:grid;grid-template-columns:72px 1fr 28px;gap:8px;margin-bottom:6px;align-items:center}
+.ch-row input{background:#1e1e1e;color:#ddd;border:1px solid #444;border-radius:4px;padding:6px 8px}
+.pattern{font-family:ui-monospace,monospace;letter-spacing:1px}
+.del{padding:2px 8px;color:#f88}
+#editor{height:200px;border:1px solid #444;border-radius:4px;overflow:hidden}
+#status{color:#8f8;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+<button id="btnPlay">▶ Play</button>
+<button id="btnPause">⏸ Pause</button>
+<label>Tempo <input id="bpm" type="number" value="120" min="40" max="300" style="width:64px"></label>
+<label>Steps/beat <input id="spb" type="number" value="4" min="1" max="8" style="width:48px"></label>
+<button id="btnSave">Save</button>
+<button id="btnLoad">Load</button>
+<button id="btnDemo">Demo</button>
+<input type="file" id="fileLoad" accept=".json,application/json" hidden>
+</header>
+<main>
+<section>
+<h2>Key map <span style="font-weight:400;color:#888;font-size:12px">— pattern layer</span></h2>
+<p class="hint">One line per key: <code>key pitch wave volume duration</code>. Use <code>c d e f g a b</code> for melody steps; <code>.</code> = rest.</p>
+<textarea id="keys" class="keys" spellcheck="false">k C2 sine 0.45 0.12
+K C2 sine 0.75 0.12
+s E4 triangle 0.18 0.08
+h G5 square 0.05 0.04
+c C4 triangle 0.35 0.3
+d D4 triangle 0.35 0.3
+e E4 triangle 0.35 0.3
+f F4 triangle 0.35 0.3
+g G4 triangle 0.35 0.3
+a A4 triangle 0.35 0.3
+b B4 triangle 0.35 0.3
+. rest sine 0 0</textarea>
+</section>
+
+<section>
+<h2>Pattern channels</h2>
+<p class="hint">Each character = one step. Example: <code>k...k...h.h.h.h.</code></p>
+<div class="ch-head"><span>Name</span><span>Pattern</span><span></span></div>
+<div id="channels"></div>
+<button id="btnAdd">+ Pattern channel</button>
+</section>
+
+<section>
+<h2>Code <span style="font-weight:400;color:#888;font-size:12px">— note layer</span></h2>
+<p class="hint"><code>music.channel(name).wave().volume().pan().notes([[pitch, beat, dur?], ...])</code> — beats align with pattern tempo. ▶ Play runs both layers together.</p>
+<div id="editor"></div>
+<div id="status">Ready.</div>
+</section>
+</main>
+
+<script>
+const SEMI = { C:0,D:2,E:4,F:5,G:7,A:9,B:11 };
+const MELODY_KEYS = new Set("cdefgabCDEFGAB".split(""));
+let editor, ctx, playing = false, paused = false, loopCount = 0;
+let nextLoopAt = 0, schedTimer = null, song = null;
+
+const DEFAULT_PATTERNS = [
+  { name: "Kick",  pattern: "k.......k......." },
+  { name: "Snare", pattern: "........s......." },
+  { name: "Hat",   pattern: "h.h.h.h.h.h.h.h." }
+];
+
+const DEFAULT_CODE = `const lead = music.channel("Lead");
+lead.wave("triangle").volume(0.35);
+lead.notes([
+  ["C4", 0, 1], ["E4", 1, 1], ["G4", 2, 1], ["C5", 3, 1],
+  ["G4", 4, 1], ["E4", 5, 1], ["C4", 6, 1]
+]);`;
+
+const STORAGE_KEY = "mini-music-lab-v1";
+const $ = id => document.getElementById(id);
+const chRoot = $("channels");
+let saveTimer = null;
+
+window.MonacoEnvironment = {
+  getWorkerUrl: () => `data:text/javascript;charset=utf-8,self.MonacoEnvironment={baseUrl:'https://unpkg.com/monaco-editor@latest/min/'};importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');`
+};
+require.config({ paths: { vs: "https://unpkg.com/monaco-editor@latest/min/vs" } });
+require(["vs/editor/editor.main"], () => {
+  editor = monaco.editor.create($("editor"), {
+    value: DEFAULT_CODE, language: "javascript", theme: "vs-dark", automaticLayout: true,
+    minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false
+  });
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, play);
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => { saveProject(); return null; });
+  editor.onDidChangeModelContent(scheduleAutoSave);
+  const saved = loadFromLocal();
+  if (saved) applyProject(saved, true);
+  else loadDemo(true);
+});
+
+function freq(note) {
+  if (!note || note === "rest") return 0;
+  const m = String(note).match(/^([A-Ga-g])(#|b)?(\d+)$/);
+  if (!m) return 440;
+  const s = SEMI[m[1].toUpperCase()] + (m[2]==="#"?1:m[2]==="b"?-1:0);
+  return 440 * Math.pow(2, (+m[3]-4) + (s-9)/12);
+}
+
+function log(t) { $("status").textContent = t; }
+
+function parseKeyMap(text) {
+  const map = {};
+  for (const line of text.split("\n")) {
+    const p = line.trim().split(/\s+/);
+    if (p.length < 2) continue;
+    const [key, pitch, wave = "sine", vol = "0.2", dur = "0.15"] = p;
+    if (key.length !== 1) continue;
+    map[key] = { pitch, wave, vol: +vol, dur: +dur };
+  }
+  return map;
+}
+
+function readPatterns() {
+  return [...chRoot.querySelectorAll(".ch-row")].map(row => ({
+    name: row.querySelector(".name").value.trim() || "Ch",
+    pattern: row.querySelector(".pattern").value
+  }));
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function addPattern(name = "Ch", pattern = "") {
+  const row = document.createElement("div");
+  row.className = "ch-row";
+  row.innerHTML = `<input class="name" value="${esc(name)}"><input class="pattern" value="${esc(pattern)}" spellcheck="false"><button class="del">×</button>`;
+  row.querySelector(".del").onclick = () => { row.remove(); scheduleAutoSave(); };
+  row.querySelectorAll("input").forEach(el => el.addEventListener("input", scheduleAutoSave));
+  chRoot.appendChild(row);
+}
+
+function serializeProject() {
+  return {
+    version: 1,
+    bpm: +$("bpm").value || 120,
+    spb: +$("spb").value || 4,
+    keys: $("keys").value,
+    patterns: readPatterns(),
+    code: editor ? editor.getValue() : ""
+  };
+}
+
+function applyProject(data, silent) {
+  pause();
+  $("bpm").value = data.bpm ?? 120;
+  $("spb").value = data.spb ?? 4;
+  $("keys").value = data.keys ?? "";
+  chRoot.innerHTML = "";
+  (data.patterns ?? []).forEach(p => addPattern(p.name, p.pattern));
+  if (editor) editor.setValue(data.code ?? DEFAULT_CODE);
+  if (!silent) log("Project loaded.");
+  else log("Restored last session.");
+}
+
+function saveToLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject())); } catch (_) {}
+}
+
+function loadFromLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return null;
+}
+
+function scheduleAutoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToLocal, 400);
+}
+
+function saveProject() {
+  const data = serializeProject();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "mini-music-lab.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  saveToLocal();
+  log("Saved to mini-music-lab.json");
+}
+
+function loadProjectFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      applyProject(JSON.parse(reader.result));
+      saveToLocal();
+    } catch (_) {
+      log("Invalid project file.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function sustainSteps(pattern, i, keyMap) {
+  let n = 1;
+  for (let j = i + 1; j < pattern.length; j++) {
+    const k = pattern[j];
+    if (k && k !== "." && keyMap[k] && keyMap[k].pitch !== "rest") break;
+    n++;
+  }
+  return n;
+}
+
+function compileCode(bpm) {
+  const chans = [];
+  const state = { bpm, defaultDur: 0.5 };
+  const beat = n => n * 60 / bpm;
+  const music = {
+    tempo(v) { state.bpm = v; bpm = v; return this; },
+    beat,
+    channel() {
+      const c = { wave: "sine", vol: 0.25, pan: 0, delay: 0, events: [] };
+      chans.push(c);
+      return {
+        wave(w) { c.wave = w; return this; },
+        volume(v) { c.vol = v; return this; },
+        pan(v) { c.pan = v; return this; },
+        delay(b) { c.delay = b; return this; },
+        notes(n) { c.events = n; return this; }
+      };
+    }
+  };
+  try {
+    new Function("music", editor.getValue())(music);
+  } catch (err) {
+    log("Code error: " + err.message);
+    return null;
+  }
+  const events = [];
+  chans.forEach(c => {
+    c.events.forEach(e => {
+      if (!e || e[0] == null) return;
+      events.push({
+        t: beat(e[1] + c.delay),
+        pitch: e[0], wave: c.wave, vol: c.vol,
+        dur: beat(e[2] ?? state.defaultDur), pan: c.pan
+      });
+    });
+  });
+  const loopEnd = events.reduce((m, e) => Math.max(m, e.t + e.dur), 0);
+  return { events, loopEnd, count: chans.length };
+}
+
+function compile() {
+  let bpm = +$("bpm").value || 120;
+  const spb = +$("spb").value || 4;
+  const stepSec = 60 / bpm / spb;
+  const beatSec = 60 / bpm;
+  const keyMap = parseKeyMap($("keys").value);
+  const patterns = readPatterns().filter(c => c.pattern.length);
+
+  const events = [];
+  let patternLoop = 0;
+
+  if (patterns.length) {
+    const steps = Math.max(...patterns.map(c => c.pattern.length));
+    patternLoop = steps * stepSec;
+    patterns.forEach(ch => {
+      for (let i = 0; i < steps; i++) {
+        const key = ch.pattern[i];
+        if (!key) continue;
+        const def = keyMap[key];
+        if (!def || def.pitch === "rest" || def.vol <= 0) continue;
+        let dur = def.dur;
+        if (MELODY_KEYS.has(key)) {
+          dur = Math.max(dur, sustainSteps(ch.pattern, i, keyMap) * stepSec * 0.92);
+        }
+        events.push({ t: i * stepSec, pitch: def.pitch, wave: def.wave, vol: def.vol, dur, pan: 0 });
+      }
+    });
+  }
+
+  const code = compileCode(bpm);
+  if (code === null) return null;
+  if (code.events.length) events.push(...code.events);
+
+  if (!events.length) {
+    log("Add pattern channels or code notes.");
+    return null;
+  }
+
+  const codeLoop = code.events.reduce((m, e) => Math.max(m, e.t + e.dur), 0);
+  const loopDur = Math.max(patternLoop, codeLoop, beatSec * 4);
+
+  return { events, loopDur, patCount: patterns.length, codeCount: code.count, steps: Math.ceil(patternLoop / stepSec) || 0 };
+}
+
+function playNote(when, { pitch, wave, vol, dur }, pan = 0) {
+  if (!pitch || pitch === "rest" || vol <= 0 || dur <= 0) return;
+  const end = when + dur;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const panner = ctx.createStereoPanner();
+  osc.type = wave;
+  osc.frequency.value = freq(pitch);
+  osc.connect(gain);
+  gain.connect(panner);
+  panner.pan.value = pan;
+  panner.connect(ctx.destination);
+  const a = Math.min(0.02, dur * 0.2);
+  gain.gain.setValueAtTime(0, when);
+  gain.gain.linearRampToValueAtTime(vol, when + a);
+  gain.gain.setValueAtTime(vol, Math.max(when + a, end - a));
+  gain.gain.linearRampToValueAtTime(0, end);
+  osc.start(when);
+  osc.stop(end + 0.02);
+}
+
+function schedulePass(t0) {
+  for (const e of song.events) playNote(t0 + e.t, e, e.pan);
+}
+
+function scheduler() {
+  if (!playing || !ctx || !song) return;
+  while (nextLoopAt < ctx.currentTime + 0.3) {
+    schedulePass(nextLoopAt);
+    if (nextLoopAt >= ctx.currentTime - 0.01) loopCount++;
+    nextLoopAt += song.loopDur;
+  }
+  log(`Loop ${loopCount} · ${song.patCount} pattern + ${song.codeCount} code channel(s) · ${song.events.length} events`);
+  schedTimer = setTimeout(scheduler, 25);
+}
+
+function resetAudio() {
+  clearTimeout(schedTimer);
+  schedTimer = null;
+  if (ctx) { ctx.close().catch(() => {}); ctx = null; }
+}
+
+function play() {
+  if (paused && ctx && song) {
+    paused = false; playing = true;
+    ctx.resume(); scheduler();
+    log("Playing…"); return;
+  }
+  resetAudio();
+  song = compile();
+  if (!song) return;
+  ctx = new AudioContext();
+  playing = true; paused = false; loopCount = 0;
+  nextLoopAt = ctx.currentTime + 0.08;
+  scheduler();
+}
+
+function pause() {
+  playing = false; paused = true;
+  clearTimeout(schedTimer); schedTimer = null;
+  if (ctx) ctx.suspend();
+  log("Paused.");
+}
+
+function loadDemo(silent) {
+  pause();
+  chRoot.innerHTML = "";
+  DEFAULT_PATTERNS.forEach(c => addPattern(c.name, c.pattern));
+  if (editor) editor.setValue(DEFAULT_CODE);
+  $("keys").value = `k C2 sine 0.45 0.12
+K C2 sine 0.75 0.12
+s E4 triangle 0.18 0.08
+h G5 square 0.05 0.04
+c C4 triangle 0.35 0.3
+d D4 triangle 0.35 0.3
+e E4 triangle 0.35 0.3
+f F4 triangle 0.35 0.3
+g G4 triangle 0.35 0.3
+a A4 triangle 0.35 0.3
+b B4 triangle 0.35 0.3
+. rest sine 0 0`;
+  $("bpm").value = 120;
+  $("spb").value = 4;
+  scheduleAutoSave();
+  if (!silent) log("Demo loaded. Press Play.");
+}
+
+$("btnPlay").onclick = play;
+$("btnPause").onclick = pause;
+$("btnAdd").onclick = () => addPattern("Ch", "");
+$("btnDemo").onclick = () => loadDemo();
+$("btnSave").onclick = saveProject;
+$("btnLoad").onclick = () => $("fileLoad").click();
+$("fileLoad").onchange = e => { loadProjectFile(e.target.files[0]); e.target.value = ""; };
+$("keys").addEventListener("input", scheduleAutoSave);
+$("bpm").addEventListener("input", scheduleAutoSave);
+$("spb").addEventListener("input", scheduleAutoSave);
+
+document.addEventListener("keydown", e => {
+  if ((e.target.closest(".monaco-editor") || e.target.matches("input,textarea")) && e.code === "Space") return;
+  if (e.code !== "Space") return;
+  e.preventDefault();
+  playing ? pause() : play();
+});
+
+</script>
+</body>
+</html>
