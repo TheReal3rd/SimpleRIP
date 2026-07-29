@@ -71,7 +71,7 @@ button {
 <body>
 
 <header>
-    <div>Three.js IDE</div>
+    <div>Three.js IDE <a href="/pages/codeEmulators/selection.html" style="color:#7bdff2;text-decoration:none;margin-left:12px;"> Samples </a></div>
 
     <div style="display:flex; gap:10px;">
         <button onclick="saveProject()">Save</button>
@@ -218,7 +218,7 @@ animate();
     return Promise.resolve(code)
   }
 
-  let file = "/pages/codeEmulators/ThreeSamples/"+ projectName;
+  let file = "/pages/codeEmulators/ThreeSamples/"+ projectName+".js";
 
   return fetch(file)
     .then(res => {

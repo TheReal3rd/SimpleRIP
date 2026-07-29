@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sample Selection</title>
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #272727;
+    color: #d4d4d4;
+    font-family: monospace;
+}
+
+header {
+    padding: 14px 18px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: normal;
+    color: #fff;
+}
+
+header .meta {
+    color: #888;
+    font-size: 13px;
+}
+
+a.nav {
+    color: #7bdff2;
+    text-decoration: none;
+}
+
+a.nav:hover {
+    text-decoration: underline;
+}
+
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 18px 48px;
+    display: grid;
+    gap: 20px;
+}
+
+.section {
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 16px 18px 8px;
+}
+
+.section h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    color: #fff;
+    font-weight: normal;
+}
+
+.section .path {
+    margin: 0 0 12px;
+    color: #888;
+    font-size: 12px;
+}
+
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 4px;
+    border-top: 1px solid #333;
+}
+
+li.empty {
+    color: #888;
+    border-top: none;
+}
+
+li a {
+    color: #4c6ef5;
+    text-decoration: none;
+}
+
+li a:hover {
+    color: #748ffc;
+    text-decoration: underline;
+}
+
+.ext {
+    color: #666;
+    font-size: 12px;
+}
+
+.section[data-kind="lua"] li a { color: #7CFC98; }
+.section[data-kind="python"] li a { color: #ffd166; }
+.section[data-kind="three"] li a { color: #7bdff2; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Sample Selection</h1>
+    <div class="meta">18 sample(s) · generated using internal tools.</div>
+</header>
+
+<main>
+
+    <section class="section" data-kind="lua">
+      <h2>Lua Samples</h2>
+      <p class="path">/../pages/codeEmulators/LuaSamples/</p>
+      <ul>
+        <li><a href="/pages/codeEmulators/luaEditor.html#factorial">factorial.lua</a><span class="ext">.lua</span></li>
+      </ul>
+    </section>
+
+
+    <section class="section" data-kind="python">
+      <h2>Python Samples</h2>
+      <p class="path">/../pages/codeEmulators/PythonSamples/</p>
+      <ul>
+        <li><a href="/pages/codeEmulators/pythonEditor.html#BradFordFactor">BradFordFactor.py</a><span class="ext">.py</span></li><li><a href="/pages/codeEmulators/pythonEditor.html#MoonLanding">MoonLanding.py</a><span class="ext">.py</span></li><li><a href="/pages/codeEmulators/pythonEditor.html#PigLatin">PigLatin.py</a><span class="ext">.py</span></li><li><a href="/pages/codeEmulators/pythonEditor.html#atan2Implementation">atan2Implementation.py</a><span class="ext">.py</span></li><li><a href="/pages/codeEmulators/pythonEditor.html#euclideanExample1">euclideanExample1.py</a><span class="ext">.py</span></li><li><a href="/pages/codeEmulators/pythonEditor.html#manhattenExample1">manhattenExample1.py</a><span class="ext">.py</span></li>
+      </ul>
+    </section>
+
+
+    <section class="section" data-kind="three">
+      <h2>Three.js Samples</h2>
+      <p class="path">/../pages/codeEmulators/ThreeSamples/</p>
+      <ul>
+        <li><a href="/pages/codeEmulators/threeEditor.html#BasicShapes">BasicShapes.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#ClickRaycasting">ClickRaycasting.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#FreeCameraMovement">FreeCameraMovement.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#GroundPlanePlayer">GroundPlanePlayer.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#KeyboardControls">KeyboardControls.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#LoadingTextures">LoadingTextures.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#MouseCameraRotation">MouseCameraRotation.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#Particles">Particles.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#RandomWorld">RandomWorld.js</a><span class="ext">.js</span></li><li><a href="/pages/codeEmulators/threeEditor.html#SimpleLighting">SimpleLighting.js</a><span class="ext">.js</span></li>
+      </ul>
+    </section>
+
+
+    <section class="section" data-kind="pixi">
+      <h2>Pixi.js Samples</h2>
+      <p class="path">/../pages/codeEmulators/PixiJSSamples/</p>
+      <ul>
+        <li><a href="/pages/codeEmulators/pixiEditor.html#basicDVD">basicDVD.js</a><span class="ext">.js</span></li>
+      </ul>
+    </section>
+
+</main>
+
+</body>
+</html>
