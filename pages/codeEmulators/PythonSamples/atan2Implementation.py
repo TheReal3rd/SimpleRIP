@@ -1,5 +1,5 @@
 # Created by AI.
-#This is just an example used in the case atan2 isn't available. Mostly for people to replement into another language.
+# This is just an example used in the case atan2 isn't available. Mostly for people to reimplementation into another language.
 
 def atan_approx(z):
     """

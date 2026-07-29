@@ -136,6 +136,9 @@ This means:
 angleRadians = math.atan2(-changeY, changeX)
 ```
 
+# Example code
+[Angle Calculator](/pages/codeEmulators/pythonEditor.html#angleExample1)
+
 # References
 
 [Python math.atan2](https://docs.python.org/3/library/math.html#math.atan2)

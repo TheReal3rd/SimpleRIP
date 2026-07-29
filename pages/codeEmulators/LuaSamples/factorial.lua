@@ -1,5 +1,4 @@
 -- Factorial sample
--- Load via: index.html#factorial
 
 local function factorial(n)
     if n <= 1 then

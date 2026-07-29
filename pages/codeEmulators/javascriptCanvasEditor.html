@@ -60,12 +60,23 @@
         image-rendering: crisp-edges;
         border: 2px solid #555;
       }
+
+      a.nav {
+          color: #7bdff2;
+          text-decoration: none;
+      }
+
+      a.nav:hover {
+          text-decoration: underline;
+      }
+
     </style>
   </head>
   <body>
     <div id="sidebar">
       <header>
         <div>Pixel IDE</div>
+        <a class="nav" href="/index.html">Simple.rip</a>
         <button onclick="run()"> Run ▶ </button>
       </header>
       <div id="editor"></div>

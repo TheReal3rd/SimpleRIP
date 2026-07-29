@@ -125,18 +125,30 @@ input.terminal-input {
 .info {
     color: #7bdff2;
 }
+
+a.nav {
+    color: #7bdff2;
+    text-decoration: none;
+}
+
+a.nav:hover {
+    text-decoration: underline;
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-    <div>JavaScript Web IDE <a href="/pages/codeEmulators/selection.html" style="color:#7bdff2;text-decoration:none;margin-left:12px;"> Samples </a></div>
+    <div>JavaScript Web IDE 
+        <a class="nav" href="/index.html">Simple.rip</a>
+        <a class="nav" href="/pages/codeEmulators/selection.html"> Samples </a>
+    </div>
        
     <div class="toolbar">
         <label>Upload:</label>
         <input type="file" id="textFileInput" />
-
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
         <button onclick="runCode()">Run ▶</button>

@@ -16,30 +16,42 @@ SECTIONS = [
         "title": "Lua Samples",
         "extensions": {".lua"},
         "kind": "lua",
+        "EditorPath" : "/pages/codeEmulators/luaEditor.html#{nested}"
     },
     {
         "dir": "../pages/codeEmulators/PythonSamples",
         "title": "Python Samples",
         "extensions": {".py"},
         "kind": "python",
+        "EditorPath" : "/pages/codeEmulators/pythonEditor.html#{nested}"
     },
     {
         "dir": "../pages/codeEmulators/ThreeSamples",
         "title": "Three.js Samples",
         "extensions": {".js"},
         "kind": "three",
+        "EditorPath" : "/pages/codeEmulators/threeEditor.html#{nested}"
     },
     {
         "dir": "../pages/codeEmulators/PixiJSSamples",
         "title": "Pixi.js Samples",
         "extensions": {".js"},
         "kind": "pixi",
+        "EditorPath" : "/pages/codeEmulators/pixiEditor.html#{nested}"
     },
     {
         "dir": "../pages/codeEmulators/JavascriptSamples",
         "title": "Javascript Samples",
         "extensions": {".js"},
         "kind": "javascript",
+        "EditorPath" : "/pages/codeEmulators/javascriptEditor.html#{nested}"
+    },
+    {
+        "dir": "../pages/codeEmulators/CSamples",
+        "title": "C Samples",
+        "extensions": {".c"},
+        "kind": "c",
+        "EditorPath" : "/pages/codeEmulators/cEditor.html#{nested}"
     },
 ]
 
@@ -60,28 +72,10 @@ def href_for(section: dict, path: Path) -> str:
     rel = path.relative_to(ROOT).as_posix()
     stem = path.stem
 
-    commonPath = "/pages/codeEmulators/"
+    nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
 
-    match section["kind"].lower():
-        case "lua":
-            nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
-            return f"{commonPath}luaEditor.html#{nested}"
-
-        case "python":
-            nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
-            return f"{commonPath}pythonEditor.html#{nested}"
-
-        case "three":
-            nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
-            return f"{commonPath}threeEditor.html#{nested}"
-
-        case "pixi":
-            nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
-            return f"{commonPath}pixiEditor.html#{nested}"
-
-        case "javascript":
-            nested = path.relative_to(ROOT / section["dir"]).with_suffix("").as_posix()
-            return f"{commonPath}javascriptEditor.html#{nested}"
+    if "EditorPath" in section.keys():
+        return section["EditorPath"].format(nested=nested)
 
     return rel
 

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>C Web IDE — Available Packages</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #272727;
+    color: #d4d4d4;
+    font-family: monospace;
+    line-height: 1.45;
+}
+header {
+    padding: 14px 18px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: normal;
+    color: #fff;
+}
+a.nav { color: #7bdff2; text-decoration: none; }
+a.nav:hover { text-decoration: underline; }
+main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 18px 64px;
+}
+h2 {
+    margin: 28px 0 10px;
+    font-size: 15px;
+    color: #fff;
+    font-weight: normal;
+    border-bottom: 1px solid #3a3a3a;
+    padding-bottom: 6px;
+}
+h3 {
+    margin: 18px 0 8px;
+    font-size: 14px;
+    color: #a5d8ff;
+    font-weight: normal;
+}
+p, li { font-size: 13px; }
+code, .mono {
+    color: #ffd166;
+}
+.note {
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+}
+.note.ext {
+    border-color: #4c6ef5;
+}
+.badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #4c6ef5;
+    color: #fff;
+    margin-left: 8px;
+}
+.badge.warn {
+    background: #866000;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0 16px;
+}
+th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-top: 1px solid #333;
+    vertical-align: top;
+}
+th { color: #888; font-weight: normal; }
+ul { padding-left: 20px; }
+.sample a { color: #a5d8ff; text-decoration: none; }
+.sample a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>C Web IDE — Available Packages</h1>
+    <div>
+        <a class="nav" href="/pages/codeEmulators/cEditor.html">C IDE</a>
+        &nbsp;·&nbsp;
+        <a class="nav" href="/pages/codeEmulators/selection.html">Samples</a>
+        &nbsp;·&nbsp;
+        <a class="nav" href="/index.html">Simple.rip</a>
+    </div>
+</header>
+
+<main>
+
+<p>
+This IDE runs C-style programs in the browser with
+<a class="nav" href="https://github.com/felixhao28/JSCPP" target="_blank" rel="noopener">JSCPP</a>
+(an interpreter). Prefer the C headers (<code>&lt;stdio.h&gt;</code>) or their C++ wrappers
+(<code>&lt;cstdio&gt;</code>) — both resolve to the same libraries.
+</p>
+
+<div class="note ext">
+    <strong style="color:#fff">IDE extensions</strong>
+    <span class="badge">added by this project</span>
+    <p style="margin:8px 0 0">
+        JSCPP’s stock <code>stdlib</code> / <code>string</code> libraries do <em>not</em> ship
+        <code>malloc</code> or byte-memory helpers. This IDE patches those headers at runtime so
+        <code>malloc</code>, <code>calloc</code>, <code>realloc</code>, <code>free</code>,
+        <code>memcpy</code>, <code>memmove</code>, <code>memset</code>, and <code>memcmp</code>
+        work for teaching samples. See <a class="nav" href="/pages/codeEmulators/cEditor.html#memory">memory.c</a>.
+    </p>
+</div>
+
+<h2>Headers you can #include</h2>
+
+<table>
+    <tr><th>Header</th><th>Alias</th><th>Purpose</th></tr>
+    <tr><td><code>&lt;cstdio&gt;</code></td><td><code>&lt;stdio.h&gt;</code></td><td>Formatted I/O</td></tr>
+    <tr><td><code>&lt;cstdlib&gt;</code></td><td><code>&lt;stdlib.h&gt;</code></td><td>Conversions, rand, heap (extended)</td></tr>
+    <tr><td><code>&lt;cstring&gt;</code></td><td><code>&lt;string.h&gt;</code></td><td>C strings + memory ops (extended)</td></tr>
+    <tr><td><code>&lt;cctype&gt;</code></td><td><code>&lt;ctype.h&gt;</code></td><td>Character tests / case</td></tr>
+    <tr><td><code>&lt;cmath&gt;</code></td><td><code>&lt;math.h&gt;</code></td><td>Floating-point math</td></tr>
+    <tr><td><code>&lt;ctime&gt;</code></td><td><code>&lt;time.h&gt;</code></td><td><code>time()</code> only</td></tr>
+    <tr><td><code>&lt;stddef.h&gt;</code></td><td>—</td><td><code>size_t</code>, <code>ptrdiff_t</code>, … <span class="badge">extended</span></td></tr>
+    <tr><td><code>&lt;stdint.h&gt;</code></td><td>—</td><td><code>int8_t</code>…<code>uint64_t</code> <span class="badge">extended</span></td></tr>
+    <tr><td><code>&lt;stdbool.h&gt;</code></td><td>—</td><td><code>bool</code>, <code>true</code>/<code>false</code> <span class="badge">extended</span></td></tr>
+    <tr><td><code>&lt;iostream&gt;</code></td><td>—</td><td>C++ <code>cin</code> / <code>cout</code> / <code>endl</code></td></tr>
+    <tr><td><code>&lt;iomanip&gt;</code></td><td>—</td><td><code>setw</code>, <code>setprecision</code>, <code>setfill</code></td></tr>
+</table>
+
+<h3>Emulated typedefs (always available)</h3>
+<p>
+These are registered automatically (no include required), and also via the headers above:
+<code>size_t</code>, <code>ssize_t</code>, <code>ptrdiff_t</code>, <code>intptr_t</code>, <code>uintptr_t</code>,
+<code>int8_t</code>/<code>uint8_t</code>, <code>int16_t</code>/<code>uint16_t</code>,
+<code>int32_t</code>/<code>uint32_t</code>, <code>int64_t</code>/<code>uint64_t</code>,
+<code>_Bool</code>, <code>time_t</code>, <code>clock_t</code>, <code>off_t</code>,
+plus helpers <code>uint</code>/<code>ulong</code>/<code>byte</code>.
+They map onto JSCPP’s integer model (typically 32-bit <code>int</code>/<code>unsigned</code>).
+</p>
+
+<h2>Package reference</h2>
+
+<h3>&lt;cstdio&gt; / &lt;stdio.h&gt;</h3>
+<table>
+    <tr><th>API</th><th>Notes</th></tr>
+    <tr><td><code>printf</code>, <code>sprintf</code></td><td>Format: d i u o x X f e g c s p (not <code>%n</code>). No length modifiers (<code>%ld</code>, <code>%lld</code>) — cast and use <code>%d</code>.</td></tr>
+    <tr><td><code>scanf</code>, <code>sscanf</code></td><td>Needs stdin — IDE prompts when Run detects scanf</td></tr>
+    <tr><td><code>puts</code>, <code>putchar</code></td><td>Output helpers</td></tr>
+    <tr><td><code>gets</code>, <code>getchar</code></td><td>Input helpers (prefer scanf)</td></tr>
+    <tr><td><code>EOF</code>, <code>NULL</code></td><td>Macros / constants</td></tr>
+</table>
+
+<h3>&lt;cstdlib&gt; / &lt;stdlib.h&gt;</h3>
+<table>
+    <tr><th>API</th><th>Notes</th></tr>
+    <tr><td><code>atoi</code>, <code>atol</code>, <code>atof</code></td><td>String → number</td></tr>
+    <tr><td><code>abs</code>, <code>labs</code>, <code>div</code>, <code>ldiv</code></td><td><code>div_t</code> / <code>ldiv_t</code> have <code>quot</code>, <code>rem</code></td></tr>
+    <tr><td><code>rand</code>, <code>srand</code>, <code>RAND_MAX</code></td><td>PRNG</td></tr>
+    <tr><td><code>qsort</code>, <code>bsearch</code></td><td>Need a C function-pointer comparator</td></tr>
+    <tr><td><code>system</code></td><td>Stubbed / limited in-browser</td></tr>
+    <tr><td><code>NULL</code></td><td>Null pointer constant</td></tr>
+    <tr><td><code>malloc</code>, <code>calloc</code>, <code>realloc</code>, <code>free</code></td><td>IDE extension <span class="badge">extended</span> — returns <code>char*</code> (JSCPP cannot cast <code>void*</code> with <code>(int*)</code>). Prefer <code>char *p = malloc(n);</code></td></tr>
+</table>
+
+<h3>&lt;cstring&gt; / &lt;string.h&gt;</h3>
+<table>
+    <tr><th>API</th><th>Notes</th></tr>
+    <tr><td><code>strlen</code>, <code>strcpy</code>, <code>strncpy</code></td><td>Length / copy</td></tr>
+    <tr><td><code>strcat</code>, <code>strncat</code></td><td>Concatenate</td></tr>
+    <tr><td><code>strcmp</code>, <code>strncmp</code></td><td>Compare</td></tr>
+    <tr><td><code>strchr</code>, <code>strrchr</code>, <code>strstr</code></td><td>Search</td></tr>
+    <tr><td><code>memcpy</code>, <code>memmove</code>, <code>memset</code>, <code>memcmp</code></td><td>IDE extension <span class="badge">extended</span></td></tr>
+</table>
+
+<h3>&lt;cctype&gt; / &lt;ctype.h&gt;</h3>
+<p>
+<code>isalnum</code>, <code>isalpha</code>, <code>isdigit</code>, <code>isspace</code>,
+<code>iscntrl</code>, <code>isprint</code>, <code>isgraph</code>, <code>islower</code>,
+<code>isupper</code>, <code>ispunct</code>, <code>isxdigit</code>,
+<code>tolower</code>, <code>toupper</code>
+</p>
+
+<h3>&lt;cmath&gt; / &lt;math.h&gt;</h3>
+<p>
+Trig: <code>sin cos tan asin acos atan atan2 sinh cosh tanh</code> (+ inverse hyperbolic where present)<br>
+Exp/log: <code>exp log log10 sqrt</code><br>
+Rounding: <code>ceil floor fabs</code> (and double <code>abs</code>)<br>
+<span class="badge warn">limited</span> Stock <code>pow</code> in JSCPP is unreliable — prefer <code>x*x</code> or repeated multiply in samples.
+</p>
+
+<h3>&lt;ctime&gt; / &lt;time.h&gt;</h3>
+<p><code>time(...)</code> — returns wall-clock seconds (Unix-style).</p>
+
+<h3>&lt;iostream&gt; + &lt;iomanip&gt;</h3>
+<p>
+C++-style I/O: <code>cin</code>, <code>cout</code>, <code>endl</code>,
+<code>setw</code>, <code>setprecision</code>, <code>setfill</code>.
+Useful if you mix C++ syntax; C samples should stick to <code>printf</code>/<code>scanf</code>.
+</p>
+
+<h2>Language features</h2>
+
+<div class="note">
+<strong style="color:#fff">Supported (most programs)</strong>
+<ul>
+    <li>Types: <code>char</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, unsigned variants, <code>bool</code>, pointers, arrays</li>
+    <li>Control: <code>if/else</code>, <code>switch</code>, <code>for</code>, <code>while</code>, <code>do/while</code></li>
+    <li>Functions, recursion, <code>typedef</code>, <code>sizeof</code> (not <code>sizeof(void*)</code>)</li>
+    <li>Preprocessor: <code>#include</code>, <code>#define</code> (simple macros)</li>
+    <li>IDE heap: <code>malloc/calloc/realloc/free</code> + patched <code>strcpy/strcat/...</code> + <code>memcpy</code> family</li>
+    <li>IDE structs: <code>struct</code> / <code>typedef struct</code>, member access <code>.</code>, pointers <code>&amp;</code> / <code>-&gt;</code></li>
+</ul>
+<strong style="color:#fff">Known JSCPP limits (do not use)</strong>
+<ul>
+    <li><code>sprintf</code> — crashes in this runtime</li>
+    <li><code>%ld</code> / length modifiers — use <code>%d</code> with a cast</li>
+    <li><code>(int *)malloc(...)</code> pointer casts — use <code>char *</code></li>
+    <li><code>if (p)</code> / <code>p == NULL</code> on pointers — unreliable</li>
+    <li><code>#if EXPR</code> / <code>#else</code> — unreliable; prefer plain <code>#define</code></li>
+    <li><code>&lt;math.h&gt;</code> together with <code>&lt;stdlib.h&gt;</code> — <code>abs</code> overload clash</li>
+    <li>Struct brace-init (<code>Point p = {1,2}</code>), bitfields, and flexible members — not supported</li>
+    <li>No real files/threads/networking; educational subset only</li>
+</ul>
+<p>Verify samples with <code>node tools/run_c_tests.js</code> (includes <a class="nav" href="/pages/codeEmulators/cEditor.html#selftest">selftest.c</a>).</p>
+</div>
+
+<h2>Sample map</h2>
+<ul class="sample">
+    <li><a href="/pages/codeEmulators/cEditor.html#stdint_types">stdint_types</a> — size_t / stdint / stdbool</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#structs">structs</a> — struct / typedef struct / -&gt;</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#selftest">selftest</a> — automated coverage sample</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#hello">hello</a> — minimal printf</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#factorial">factorial</a> — recursion</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#strings">strings</a> — &lt;cstring&gt; operations</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#memory">memory</a> — malloc / memcpy family</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#pointers">pointers</a> — &, *, pointer walk</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#arrays">arrays</a> — indexing &amp; decay to pointers</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#ctype_chars">ctype_chars</a> — &lt;cctype&gt;</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#math_demo">math_demo</a> — &lt;cmath&gt;</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#types_basics">types_basics</a> — types, typedef, sizeof</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#control_flow">control_flow</a> — if / switch / loops</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#conversions">conversions</a> — atoi / sprintf / div</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#input_scanf">input_scanf</a> — scanf + stdin prompt</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#functions">functions</a> — parameters &amp; fibonacci</li>
+    <li><a href="/pages/codeEmulators/cEditor.html#preprocessor">preprocessor</a> — macros &amp; #if</li>
+</ul>
+
+</main>
+</body>
+</html>

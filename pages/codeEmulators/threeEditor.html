@@ -65,13 +65,26 @@ button {
     border: none;
     background: black;
 }
+
+a.nav {
+    color: #7bdff2;
+    text-decoration: none;
+}
+
+a.nav:hover {
+    text-decoration: underline;
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-    <div>Three.js IDE <a href="/pages/codeEmulators/selection.html" style="color:#7bdff2;text-decoration:none;margin-left:12px;"> Samples </a></div>
+    <div>Three.js IDE 
+        <a class="nav" href="/index.html">Simple.rip</a>
+        <a class="nav" href="/pages/codeEmulators/selection.html"> Samples </a>
+    </div>
 
     <div style="display:flex; gap:10px;">
         <button onclick="saveProject()">Save</button>

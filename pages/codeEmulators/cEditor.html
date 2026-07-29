@@ -1,11 +1,18 @@
+<!--
+Created Using AI.
+Been tested and mostly for myself as i should be learning C but i've been lazy.
+Just been adding further tools to this cause why not. Aswell i play around with these tools.
+In my own time anyway.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lua Web IDE</title>
+<title>C Web IDE</title>
 
-<script src="https://unpkg.com/fengari-web@0.1.4/dist/fengari-web.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/JSCPP@2.0.6/dist/JSCPP.es5.min.js"></script>
+<script src="/pages/codeEmulators/Libraries/c-runtime.js"></script>
 <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
 
 <style>
@@ -63,6 +70,15 @@ input[type="file"] {
     color: white;
 }
 
+a.nav {
+    color: #7bdff2;
+    text-decoration: none;
+}
+
+a.nav:hover {
+    text-decoration: underline;
+}
+
 #container {
     flex: 1;
     display: flex;
@@ -89,26 +105,6 @@ input[type="file"] {
     font-size: 14px;
 }
 
-.line {
-    display: flex;
-    align-items: center;
-}
-
-.prompt {
-    color: #7CFC98;
-    margin-right: 8px;
-}
-
-input.terminal-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: white;
-    outline: none;
-    font-family: monospace;
-    font-size: 14px;
-}
-
 .log {
     color: #d4d4d4;
 }
@@ -124,30 +120,22 @@ input.terminal-input {
 .info {
     color: #7bdff2;
 }
-
-a.nav {
-    color: #7bdff2;
-    text-decoration: none;
-}
-
-a.nav:hover {
-    text-decoration: underline;
-}
-
 </style>
 </head>
 
 <body>
 
 <header>
-    <div>Lua Web IDE
+    <div class="toolbar">
+        <div>C Web IDE</div>
         <a class="nav" href="/index.html">Simple.rip</a>
-        <a class="nav" href="/pages/codeEmulators/selection.html"> Samples </a>
+        <a class="nav" href="/pages/codeEmulators/selection.html">Samples</a>
+        <a class="nav" href="/pages/codeEmulators/c-packages.html">Packages</a>
     </div>
 
     <div class="toolbar">
         <label>Upload:</label>
-        <input type="file" id="textFileInput" accept=".lua,.txt" />
+        <input type="file" id="textFileInput" accept=".c,.h,.cpp,.txt" />
 
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
@@ -188,27 +176,27 @@ require.config({
     }
 });
 
-const starterCode = `-- Lua Web IDE
--- Ctrl + Enter to run
+const starterCode = `/* C Web IDE
+ * Ctrl + Enter to run
+ */
 
-print("Hello from the Lua runtime")
+#include <stdio.h>
 
-local numbers = {1, 2, 3, 4}
+int main() {
+    printf("Hello from the C runtime\\n");
+    printf("See Packages for available headers (stdio, string, stdlib, ...)\\n");
 
-local doubled = {}
-for i, n in ipairs(numbers) do
-    doubled[i] = n * 2
-end
+    int numbers[] = {1, 2, 3, 4};
+    int n = 4;
 
-print("Doubled:", table.concat(doubled, ", "))
+    printf("Doubled:");
+    for (int i = 0; i < n; i++) {
+        printf(" %d", numbers[i] * 2);
+    }
+    printf("\\n");
 
-local function greet(name)
-    return "Hello, " .. name .. "!"
-end
-
-print(greet("Lua"))
-
--- Optional: input("Your name: ") opens a prompt dialog
+    return 0;
+}
 `;
 
 hashProjectLoad().then(result => {
@@ -217,7 +205,7 @@ hashProjectLoad().then(result => {
 
         editor = monaco.editor.create(document.getElementById('editor'), {
             value: result,
-            language: 'lua',
+            language: 'c',
             theme: 'vs-dark',
             fontSize: 14,
             automaticLayout: true,
@@ -237,13 +225,13 @@ function saveProject() {
     const content = editor.getValue();
 
     const blob = new Blob([content], {
-        type: 'text/x-lua'
+        type: 'text/x-c'
     });
 
     const link = document.createElement('a');
 
     link.href = URL.createObjectURL(blob);
-    link.download = 'project.lua';
+    link.download = 'project.c';
 
     document.body.appendChild(link);
     link.click();
@@ -258,7 +246,7 @@ function hashProjectLoad() {
         return Promise.resolve(starterCode);
     }
 
-    const file = '/pages/codeEmulators/LuaSamples/' + projectName + '.lua';
+    const file = 'CSamples/' + projectName + '.c';
 
     return fetch(file)
         .then(res => {
@@ -281,87 +269,67 @@ function write(text, type = 'log') {
 
     const line = document.createElement('div');
     line.className = type;
-
-    if (typeof text === 'object') {
-        try {
-            line.textContent = JSON.stringify(text, null, 2);
-        } catch {
-            line.textContent = String(text);
-        }
-    } else {
-        line.textContent = String(text);
-    }
+    line.textContent = text == null ? '' : String(text);
 
     term.appendChild(line);
     term.scrollTop = term.scrollHeight;
 }
 
-window.__luaWrite = function (text, type) {
-    if (text != null && typeof text !== 'string') {
-        if (typeof fengari !== 'undefined' && fengari.to_jsstring) {
-            try {
-                text = fengari.to_jsstring(text);
-            } catch {
-                text = String(text);
-            }
-        } else {
-            text = String(text);
-        }
-    }
-    write(text == null ? '' : String(text), type || 'log');
-};
+function writeRaw(text, type = 'log') {
+    const term = document.getElementById('terminal');
+    const line = document.createElement('div');
+    line.className = type;
+    line.style.whiteSpace = 'pre-wrap';
+    line.textContent = text == null ? '' : String(text);
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+}
+
+function needsStdin(code) {
+    return /\b(scanf|gets|getchar|cin\s*>>)/.test(code);
+}
 
 async function runCode() {
 
     clearTerminal();
 
-    if (typeof fengari === 'undefined' || typeof fengari.load !== 'function') {
-        write('Lua runtime failed to load (fengari). Refresh the page.', 'error');
+    if (typeof JSCPP === 'undefined' || typeof JSCPP.run !== 'function') {
+        write('C runtime failed to load (JSCPP). Refresh the page.', 'error');
         return;
     }
 
+    if (typeof CIdeRuntime === 'undefined' || !CIdeRuntime.ensureHeapExtensions(JSCPP)) {
+        write('Warning: c-runtime.js heap extensions not loaded.', 'warn');
+    }
+
     const code = editor.getValue();
+    let stdin = '';
+
+    if (needsStdin(code)) {
+        const typed = window.prompt('Program stdin (for scanf / cin):', '');
+        if (typed === null) {
+            write('Run cancelled.', 'warn');
+            return;
+        }
+        stdin = typed;
+        write('stdin: ' + JSON.stringify(stdin), 'info');
+    }
 
     try {
+        const result = CIdeRuntime.runC(JSCPP, code, stdin);
+        const buffer = result.stdout || '';
 
-        const prelude = `
-local js = require "js"
+        if (buffer.length) {
+            const parts = buffer.replace(/\r\n/g, '\n').split('\n');
+            for (let i = 0; i < parts.length; i++) {
+                if (i === parts.length - 1 && parts[i] === '') {
+                    continue;
+                }
+                write(parts[i], 'log');
+            }
+        }
 
-local function write_to_console(text, kind)
-    js.global:__luaWrite(tostring(text), kind)
-end
-
-function print(...)
-    local n = select("#", ...)
-    local parts = {}
-    for i = 1, n do
-        parts[i] = tostring(select(i, ...))
-    end
-    write_to_console(table.concat(parts, "\\t"), "log")
-end
-
-function warn(...)
-    local n = select("#", ...)
-    local parts = {}
-    for i = 1, n do
-        parts[i] = tostring(select(i, ...))
-    end
-    write_to_console(table.concat(parts, "\\t"), "warn")
-end
-
-function input(message)
-    message = message or ">"
-    write_to_console(tostring(message), "info")
-    local result = js.global:prompt(tostring(message), "")
-    if result == nil then
-        return ""
-    end
-    write_to_console("> " .. tostring(result), "log")
-    return tostring(result)
-end
-`;
-
-        fengari.load(prelude + "\n" + code)();
+        write('Program exited with code ' + result.exitCode, 'info');
 
     } catch (err) {
         write(err.message || err.toString(), 'error');
