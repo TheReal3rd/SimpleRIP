@@ -4,6 +4,9 @@ Simple.rip is a website that provides tools to do simple or complex things. Such
 
 Aim is to keep everything all in the browser and nothing touches my servers.
 
+# License
+Follow the license of this repo however follow the license for the libraries used within this project by their own license. This project doesn't overwrite or remove their own inderpendent license or licenses.
+
 ## TODO:
 * Add ComputerCraft image converter from my older projects.
 * Add a gif / animted mode to Arcade and ComputerCraft image converters.

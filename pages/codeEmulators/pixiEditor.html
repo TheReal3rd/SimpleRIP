@@ -147,6 +147,7 @@ a.nav:hover {
     <div>Pixi.js IDE 
         <a class="nav" href="/index.html">Simple.rip</a>
         <a class="nav" href="/pages/codeEmulators/selection.html"> Samples </a>
+        <a class="nav" href="/pages/codeEmulators/pixiTexturePacker.html"> Texture Packer </a>
     </div>
 
     <div class="toolbar">
@@ -390,7 +391,9 @@ function exportProject() {
 
     document.body.appendChild(app.view);
 
-    ${content}
+    (async () => {
+      ${content}
+    })().catch(err => console.error(err));
   <\/script>
 </body>
 </html>`;

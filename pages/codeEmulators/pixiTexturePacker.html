@@ -1,0 +1,670 @@
+<!--
+Created using AI.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixi Texture Packer</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #0e0e0e;
+      color: white;
+      font-family: monospace;
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(960px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1rem 0 2rem;
+    }
+
+    .title {
+      padding-left: 8px;
+      padding-bottom: 5px;
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: normal;
+      color: white;
+    }
+
+    .sub {
+      margin: 0 0 1rem;
+      padding-left: 8px;
+      color: #d4d4d4;
+      font-size: 13px;
+    }
+
+    .panel {
+      background: #272727;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .panel-title {
+      padding: 6px 10px;
+      background: #272727;
+      font-size: 13px;
+      color: white;
+      border-bottom: 1px solid #3a3a3a;
+    }
+
+    .panel-body {
+      padding: 10px;
+      width: 100%;
+    }
+
+    .rows { display: grid; gap: 8px; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: 1fr; }
+    }
+
+    input, select, button, pre {
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      min-width: 0;
+      background: #0b0d14;
+      color: white;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: #4c6ef5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      background: #4c6ef5;
+      border: none;
+      padding: 8px 14px;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      color: white;
+    }
+
+    button.ghost:hover { background: #3a3a3a; filter: none; }
+
+    button.danger {
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      color: #ff6b6b;
+    }
+
+    button.danger:hover { background: #3a3a3a; filter: none; }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #3a3a3a;
+      color: #d4d4d4;
+      font-size: 13px;
+    }
+
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: white;
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      color: #d4d4d4;
+      font-size: 13px;
+    }
+
+    .hint code { color: #7bdff2; }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: #0b0d14;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      color: #d4d4d4;
+      min-height: 1.2em;
+      width: 100%;
+    }
+
+    .status .ok { color: #7CFC98; }
+    .status .err { color: #ff6b6b; }
+    .status .warn { color: #ffd166; }
+    .status .info { color: #7bdff2; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .tab {
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      color: #d4d4d4;
+    }
+
+    .tab.active {
+      background: #4c6ef5;
+      border-color: #4c6ef5;
+      color: white;
+    }
+
+    #pane-preview,
+    #pane-atlas,
+    #pane-pixi,
+    #pane-gzip {
+      width: 100%;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+      width: 100%;
+    }
+
+    .preview-grid > .hint {
+      grid-column: 1 / -1;
+      margin: 0;
+      width: 100%;
+    }
+
+    .card {
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      overflow: hidden;
+      background: black;
+      width: 100%;
+    }
+
+    .card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      background: black;
+    }
+
+    .card figcaption {
+      display: block;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #d4d4d4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 420px;
+      width: 100%;
+      overflow: auto;
+      background: #0b0d14;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+      color: #d4d4d4;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    .meta {
+      margin: 10px 0 0;
+      color: #7bdff2;
+      font-size: 13px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Pixi Base64 Texture Packer</h1>
+    <p class="sub">Convert image URLs to base64, pack an atlas, generate Pixi texture dictionary code.</p>
+
+    <section class="panel">
+      <div class="panel-title">Images</div>
+      <div class="panel-body">
+        <div class="rows" id="rows"></div>
+        <div class="actions">
+          <button type="button" class="ghost" id="addRow">Add URL</button>
+          <button type="button" id="convert">Convert &amp; pack</button>
+          <button type="button" class="ghost" id="clearAll">Clear</button>
+        </div>
+        <div class="options">
+          <label><input type="checkbox" id="optGzip" checked /> Gzip atlas</label>
+          <label><input type="checkbox" id="optStripPrefix" /> Raw base64 + mime</label>
+          <label>
+            Pixi
+            <select id="pixiStyle">
+              <option value="v8">v8 Assets</option>
+              <option value="v7">v7 Assets</option>
+              <option value="texture">Texture.from</option>
+            </select>
+          </label>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">Output</div>
+      <div class="panel-body">
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="preview">Preview</button>
+          <button type="button" class="tab" data-tab="atlas">Atlas JSON</button>
+          <button type="button" class="tab" data-tab="pixi">Pixi code</button>
+          <button type="button" class="tab" data-tab="gzip">Gzip</button>
+        </div>
+
+        <div id="pane-preview"><div class="preview-grid" id="preview"></div></div>
+        <div id="pane-atlas" hidden><pre id="atlasOut"></pre></div>
+        <div id="pane-pixi" hidden><pre id="pixiOut"></pre></div>
+        <div id="pane-gzip" hidden><pre id="gzipOut"></pre></div>
+
+        <div class="meta" id="meta"></div>
+        <div class="actions">
+          <button type="button" id="copyOut" disabled>Copy</button>
+          <button type="button" class="ghost" id="downloadJson" disabled>atlas.json</button>
+          <button type="button" class="ghost" id="downloadGz" disabled>atlas.json.gz</button>
+          <button type="button" class="ghost" id="downloadJs" disabled>textures.js</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const rowsEl = document.getElementById("rows");
+    const statusEl = document.getElementById("status");
+    const previewEl = document.getElementById("preview");
+    const atlasOut = document.getElementById("atlasOut");
+    const pixiOut = document.getElementById("pixiOut");
+    const gzipOut = document.getElementById("gzipOut");
+    const metaEl = document.getElementById("meta");
+    const copyBtn = document.getElementById("copyOut");
+    const downloadJsonBtn = document.getElementById("downloadJson");
+    const downloadGzBtn = document.getElementById("downloadGz");
+    const downloadJsBtn = document.getElementById("downloadJs");
+
+    let atlasText = "";
+    let pixiText = "";
+    let gzipText = "";
+    let gzipBytes = null;
+    let activeTab = "preview";
+
+    const DEMO = [
+      { key: "bunny", url: "https://pixijs.com/assets/bunny.png" },
+      { key: "eggHead", url: "https://pixijs.com/assets/eggHead.png" },
+      { key: "flowerTop", url: "https://pixijs.com/assets/flowerTop.png" },
+    ];
+
+    function escapeAttr(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;");
+    }
+
+    function addRow({ key = "", url = "" } = {}) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <input class="key" type="text" placeholder="key e.g. space ship" value="${escapeAttr(key)}" />
+        <input class="url" type="url" placeholder="https://example.com/image.png" value="${escapeAttr(url)}" />
+        <button type="button" class="danger remove" title="Remove">Remove</button>
+      `;
+      row.querySelector(".remove").addEventListener("click", () => {
+        row.remove();
+        if (!rowsEl.children.length) addRow();
+      });
+      rowsEl.appendChild(row);
+    }
+
+    function setStatus(html) {
+      statusEl.innerHTML = html;
+    }
+
+    function collectRows() {
+      return [...rowsEl.querySelectorAll(".row")].map((row) => ({
+        key: row.querySelector(".key").value.trim(),
+        url: row.querySelector(".url").value.trim(),
+      }));
+    }
+
+    /** Only http(s) remote URLs — never file:// or local paths. */
+    function assertHttpUrl(raw) {
+      let u;
+      try {
+        u = new URL(raw);
+      } catch {
+        throw new Error("Invalid URL");
+      }
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        throw new Error("Only http/https URLs allowed (not file://)");
+      }
+      return u.href;
+    }
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error("read failed"));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    /**
+     * GET remote image bytes via fetch.
+     * Works from file:// pages when the image host sends CORS headers
+     * (Access-Control-Allow-Origin: * or null).
+     */
+    async function urlToDataUrl(url) {
+      const href = assertHttpUrl(url);
+      const res = await fetch(href, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-cache",
+        redirect: "follow",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      return blobToDataUrl(blob);
+    }
+
+    function parseDataUrl(dataUrl) {
+      const m = /^data:([^;]+);base64,(.+)$/s.exec(dataUrl);
+      if (!m) throw new Error("Invalid data URL");
+      return { mime: m[1], base64: m[2] };
+    }
+
+    function formatBytes(n) {
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    async function gzipString(text) {
+      if (!window.CompressionStream) {
+        throw new Error("CompressionStream not supported");
+      }
+      const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    }
+
+    function generatePixiCode(atlasObj, style) {
+      const pretty = JSON.stringify(atlasObj, null, 2);
+      if (style === "texture") {
+        return `import { Texture } from 'pixi.js';
+
+export const ASSET_ATLAS = ${pretty};
+
+export async function loadTextureDictionary(atlas = ASSET_ATLAS) {
+  const textures = {};
+  for (const [name, data] of Object.entries(atlas)) {
+    const src = typeof data === 'string'
+      ? data
+      : \`data:\${data.mime};base64,\${data.base64}\`;
+    textures[name] = Texture.from(src);
+  }
+  return textures;
+}
+
+// const textures = await loadTextureDictionary();
+// const sprite = new Sprite(textures['space ship']);
+`;
+      }
+
+      return `import { Assets, Sprite } from 'pixi.js';
+
+export const ASSET_ATLAS = ${pretty};
+
+export async function loadTextureDictionary(atlas = ASSET_ATLAS) {
+  const bundle = {};
+  for (const [name, data] of Object.entries(atlas)) {
+    bundle[name] = typeof data === 'string'
+      ? data
+      : \`data:\${data.mime};base64,\${data.base64}\`;
+  }
+
+  Assets.addBundle('packed-textures', bundle);
+  await Assets.loadBundle('packed-textures');
+
+  const textures = {};
+  for (const name of Object.keys(bundle)) {
+    textures[name] = Assets.get(name);
+  }
+  return textures;
+}
+
+// const textures = await loadTextureDictionary();
+// const ship = new Sprite(textures['space ship']);
+`;
+    }
+
+    function showTab(name) {
+      activeTab = name;
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.tab === name);
+      });
+      document.getElementById("pane-preview").hidden = name !== "preview";
+      document.getElementById("pane-atlas").hidden = name !== "atlas";
+      document.getElementById("pane-pixi").hidden = name !== "pixi";
+      document.getElementById("pane-gzip").hidden = name !== "gzip";
+    }
+
+    function download(filename, content, type = "application/json") {
+      const blob = content instanceof Blob ? content : new Blob([content], { type });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function renderPreview(entries) {
+      previewEl.innerHTML = "";
+      if (!entries.length) {
+        previewEl.innerHTML = `<p class="hint">No images packed yet.</p>`;
+        return;
+      }
+      for (const { key, dataUrl } of entries) {
+        const fig = document.createElement("figure");
+        fig.className = "card";
+        fig.innerHTML = `<img alt="${escapeAttr(key)}" /><figcaption>${escapeAttr(key)}</figcaption>`;
+        fig.querySelector("img").src = dataUrl;
+        previewEl.appendChild(fig);
+      }
+    }
+
+    async function convertAll() {
+      const rows = collectRows();
+      const strip = document.getElementById("optStripPrefix").checked;
+      const useGzip = document.getElementById("optGzip").checked;
+      const style = document.getElementById("pixiStyle").value;
+      const atlasObj = {};
+      const entries = [];
+      const logs = [];
+
+      copyBtn.disabled = true;
+      downloadJsonBtn.disabled = true;
+      downloadGzBtn.disabled = true;
+      downloadJsBtn.disabled = true;
+      setStatus("Fetching…");
+
+      for (const row of rows) {
+        if (!row.key) {
+          logs.push(`<span class="err">✗</span> missing key`);
+          continue;
+        }
+        if (atlasObj[row.key]) {
+          logs.push(`<span class="err">✗</span> duplicate key "${row.key}"`);
+          continue;
+        }
+        if (!row.url) {
+          logs.push(`<span class="err">✗</span> ${row.key} — missing URL`);
+          continue;
+        }
+        try {
+          const dataUrl = await urlToDataUrl(row.url);
+          const parsed = parseDataUrl(dataUrl);
+          atlasObj[row.key] = strip
+            ? { mime: parsed.mime, base64: parsed.base64 }
+            : dataUrl;
+          entries.push({ key: row.key, dataUrl });
+          logs.push(`<span class="ok">✓</span> ${row.key}`);
+        } catch (err) {
+          logs.push(`<span class="err">✗</span> ${row.key} — ${err.message || err}`);
+        }
+        setStatus(logs.join("\n"));
+      }
+
+      if (!Object.keys(atlasObj).length) {
+        setStatus(logs.join("\n") + `\n<span class="err">Nothing converted.</span>`);
+        return;
+      }
+
+      atlasText = JSON.stringify(atlasObj, null, 2);
+      pixiText = generatePixiCode(atlasObj, style);
+      atlasOut.textContent = atlasText;
+      pixiOut.textContent = pixiText;
+      renderPreview(entries);
+
+      const jsonBytes = new TextEncoder().encode(atlasText).length;
+      const meta = [`${Object.keys(atlasObj).length} textures`, `atlas ${formatBytes(jsonBytes)}`];
+
+      gzipBytes = null;
+      gzipText = "";
+      if (useGzip) {
+        try {
+          gzipBytes = await gzipString(JSON.stringify(atlasObj));
+          const b64 = bytesToBase64(gzipBytes);
+          gzipText =
+            `export const ASSET_ATLAS_GZIP_BASE64 = ${JSON.stringify(b64)};\n\n` +
+            `export async function loadAtlasFromGzipBase64(b64 = ASSET_ATLAS_GZIP_BASE64) {\n` +
+            `  const binary = Uint8Array.from(atob(b64), c => c.charCodeAt(0));\n` +
+            `  const stream = new Blob([binary]).stream().pipeThrough(new DecompressionStream('gzip'));\n` +
+            `  return JSON.parse(await new Response(stream).text());\n` +
+            `}\n`;
+          gzipOut.textContent = gzipText;
+          meta.push(`gzip ${formatBytes(gzipBytes.length)}`);
+          downloadGzBtn.disabled = false;
+        } catch (err) {
+          gzipOut.textContent = `Gzip unavailable: ${err.message}`;
+        }
+      } else {
+        gzipOut.textContent = "Enable Gzip atlas and convert again.";
+      }
+
+      metaEl.textContent = meta.join(" · ");
+      copyBtn.disabled = false;
+      downloadJsonBtn.disabled = false;
+      downloadJsBtn.disabled = false;
+      logs.push(`<span class="ok">Packed ${Object.keys(atlasObj).length}.</span>`);
+      setStatus(logs.join("\n"));
+      showTab("pixi");
+    }
+
+    document.getElementById("addRow").addEventListener("click", () => addRow());
+    document.getElementById("clearAll").addEventListener("click", () => {
+      rowsEl.innerHTML = "";
+      addRow();
+      atlasText = pixiText = gzipText = "";
+      gzipBytes = null;
+      atlasOut.textContent = "";
+      pixiOut.textContent = "";
+      gzipOut.textContent = "";
+      metaEl.textContent = "";
+      previewEl.innerHTML = "";
+      setStatus("");
+      copyBtn.disabled = true;
+      downloadJsonBtn.disabled = true;
+      downloadGzBtn.disabled = true;
+      downloadJsBtn.disabled = true;
+    });
+    document.getElementById("convert").addEventListener("click", convertAll);
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => showTab(tab.dataset.tab));
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const map = { preview: atlasText, atlas: atlasText, pixi: pixiText, gzip: gzipText };
+      const text = map[activeTab] || atlasText;
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      setStatus((statusEl.innerHTML ? statusEl.innerHTML + "\n" : "") + `<span class="ok">Copied.</span>`);
+    });
+
+    downloadJsonBtn.addEventListener("click", () => {
+      if (atlasText) download("atlas.json", atlasText);
+    });
+    downloadGzBtn.addEventListener("click", () => {
+      if (gzipBytes) download("atlas.json.gz", new Blob([gzipBytes], { type: "application/gzip" }));
+    });
+    downloadJsBtn.addEventListener("click", () => {
+      if (pixiText) download("textures.js", pixiText, "text/javascript");
+    });
+
+    DEMO.forEach(addRow);
+    previewEl.innerHTML = `<p class="hint">Click Convert &amp; pack to fetch the demo URLs.</p>`;
+  </script>
+</body>
+</html>
