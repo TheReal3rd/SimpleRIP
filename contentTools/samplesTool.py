@@ -53,6 +53,13 @@ SECTIONS = [
         "kind": "c",
         "EditorPath" : "/pages/codeEmulators/cEditor.html#{nested}"
     },
+    {
+        "dir": "../pages/codeEmulators/PixelSamples",
+        "title": "Pixel Samples",
+        "extensions": {".js"},
+        "kind": "pixel",
+        "EditorPath" : "/pages/codeEmulators/javascriptCanvasEditor.html#{nested}"
+    },
 ]
 
 

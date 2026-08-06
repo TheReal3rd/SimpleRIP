@@ -76,7 +76,11 @@
     <div id="sidebar">
       <header>
         <div>Pixel IDE</div>
-        <a class="nav" href="/index.html">Simple.rip</a>
+        <a class="nav" href="/index.html"> Simple.rip </a>
+        <a class="nav" href="/pages/codeEmulators/selection.html"> Samples </a>
+        <input type="file" id="textFileInput" style="display: none;" />
+        <button onclick="loadProject()">Load</button>
+        <button onclick="saveProject()">Save</button>
         <button onclick="run()"> Run ▶ </button>
       </header>
       <div id="editor"></div>
@@ -85,6 +89,33 @@
       <canvas id="screen"></canvas>
     </div>
     <script>
+      function saveProject() {
+        const content = editor.getValue();
+
+        const blob = new Blob([content], {
+            type: 'text/javascript'
+        });
+
+        const link = document.createElement('a');
+
+        link.href = URL.createObjectURL(blob);
+        link.download = 'project.js';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      function loadProject() {
+        document.getElementById('textFileInput').click();
+      }
+      document.getElementById('textFileInput').addEventListener('change', event => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = e => editor.setValue(e.target.result);
+          reader.readAsText(file);
+      });
       let editor;
       window.MonacoEnvironment = {
         getWorkerUrl() {
@@ -378,7 +409,30 @@
           ctx.fillText("Runtime Error", 4, 12);
         }
       }
-      const starter = `
+
+    hashProjectLoad().then(result => {
+      require(
+        ["vs/editor/editor.main"],
+        function() {
+          editor = monaco.editor.create(document.getElementById("editor"), {
+            value: result,
+            language: "javascript",
+            theme: "vs-dark",
+            automaticLayout: true,
+            minimap: {
+              enabled: false
+            },
+            fontSize: 14
+          });
+          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+            () => run());
+          run();
+        });
+    });
+
+    function hashProjectLoad() {
+      let projectName = window.location.hash.substring(1);
+      let code = `
 
 let angle = 0;
 
@@ -598,23 +652,27 @@ gfx.start(draw);
 */
 
 `;
-      require(
-        ["vs/editor/editor.main"],
-        function() {
-          editor = monaco.editor.create(document.getElementById("editor"), {
-            value: starter,
-            language: "javascript",
-            theme: "vs-dark",
-            automaticLayout: true,
-            minimap: {
-              enabled: false
-            },
-            fontSize: 14
-          });
-          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-            () => run());
-          run();
+      if (!projectName) {
+        return Promise.resolve(code)
+      }
+
+      let file = "/pages/codeEmulators/PixelSamples/"+ projectName + ".js";
+
+      return fetch(file)
+        .then(res => {
+          if (!res.ok) throw new Error("File not found");
+          return res.text();
+        })
+        .then(md => {
+          return md;
+        })
+        .catch(err => {
+          return code;
         });
+    }
+
+
+    window.addEventListener("hashchange", hashProjectLoad);
     </script>
   </body>
 </html>
