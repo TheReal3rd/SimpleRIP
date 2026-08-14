@@ -1,3 +1,5 @@
+//OOP Version of Rain.js
+
 class Particle {
 
     constructor() {
@@ -36,5 +38,5 @@ function draw(){
     parts.forEach((x) => {
         gfx.pixel(x.pixelX, x.pixelY, "CYAN");
         x.update();
-    })
+    });
 }

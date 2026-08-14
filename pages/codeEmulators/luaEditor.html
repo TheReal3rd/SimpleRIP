@@ -151,7 +151,8 @@ a.nav:hover {
 
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
-        <button onclick="runCode()">Run ▶</button>
+        <button id="stopBtn" onclick="stopCode()" disabled>Stop ■</button>
+        <button id="runBtn" onclick="runCode()">Run ▶</button>
     </div>
 </header>
 
@@ -171,6 +172,10 @@ a.nav:hover {
 
 <script>
 let editor;
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
+let inputSAB = null;
 
 window.MonacoEnvironment = {
     getWorkerUrl: function () {
@@ -296,76 +301,424 @@ function write(text, type = 'log') {
     term.scrollTop = term.scrollHeight;
 }
 
-window.__luaWrite = function (text, type) {
-    if (text != null && typeof text !== 'string') {
-        if (typeof fengari !== 'undefined' && fengari.to_jsstring) {
-            try {
-                text = fengari.to_jsstring(text);
-            } catch {
-                text = String(text);
-            }
-        } else {
-            text = String(text);
-        }
+function setRunning(running) {
+    isRunning = running;
+    document.getElementById('runBtn').disabled = running;
+    document.getElementById('stopBtn').disabled = !running;
+}
+
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
     }
-    write(text == null ? '' : String(text), type || 'log');
-};
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+}
 
-async function runCode() {
+function stopCode(reason) {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
+    destroyWorker();
+    setRunning(false);
+    write(reason || 'Execution stopped.', 'warn');
+}
 
-    clearTerminal();
+const LUA_RUNNER_SOURCE = `
+'use strict';
 
-    if (typeof fengari === 'undefined' || typeof fengari.load !== 'function') {
-        write('Lua runtime failed to load (fengari). Refresh the page.', 'error');
+var inputMeta = null;
+var inputBytes = null;
+var fengari = null;
+
+function syncInput(message) {
+    if (!inputMeta || !inputBytes) {
+        self.postMessage({ type: 'console', level: 'warn', text: 'input() needs SharedArrayBuffer (cross-origin isolation). Returning empty string.' });
+        return '';
+    }
+    Atomics.store(inputMeta, 0, 0);
+    self.postMessage({ type: 'prompt', message: String(message == null ? '>' : message) });
+    Atomics.wait(inputMeta, 0, 0);
+    var len = inputMeta[1] | 0;
+    if (len < 0) len = 0;
+    if (len > inputBytes.length) len = inputBytes.length;
+    var out = '';
+    for (var i = 0; i < len; i++) {
+        out += String.fromCharCode(inputBytes[i]);
+    }
+    return out;
+}
+
+function makeCtor(name) {
+    var C = function () {};
+    try { Object.defineProperty(C, 'name', { value: name }); } catch (e) {}
+    return C;
+}
+
+function buildFakeWindow() {
+    var emptyFn = function () {};
+    var ctorNames = [
+        'EventTarget', 'Node', 'Document', 'HTMLDocument', 'XMLDocument',
+        'DocumentFragment', 'Element', 'HTMLElement', 'SVGElement',
+        'HTMLCanvasElement', 'HTMLImageElement', 'HTMLScriptElement',
+        'HTMLDivElement', 'HTMLSpanElement', 'HTMLInputElement',
+        'HTMLTextAreaElement', 'HTMLBodyElement', 'HTMLHeadElement',
+        'HTMLHtmlElement', 'CharacterData', 'Text', 'Comment',
+        'Attr', 'NamedNodeMap', 'NodeList', 'HTMLCollection',
+        'DOMTokenList', 'CSSStyleDeclaration', 'Window', 'Navigator',
+        'Location', 'History', 'MutationObserver', 'Event', 'CustomEvent',
+        'MouseEvent', 'KeyboardEvent', 'DOMParser', 'XMLSerializer'
+    ];
+
+    var win = {};
+    for (var i = 0; i < ctorNames.length; i++) {
+        win[ctorNames[i]] = makeCtor(ctorNames[i]);
+    }
+
+    var passThrough = [
+        'Object', 'Array', 'Function', 'String', 'Number', 'Boolean', 'Symbol',
+        'Math', 'JSON', 'Date', 'RegExp', 'Error', 'TypeError', 'RangeError',
+        'SyntaxError', 'URIError', 'EvalError', 'ReferenceError',
+        'ArrayBuffer', 'SharedArrayBuffer', 'DataView',
+        'Int8Array', 'Uint8Array', 'Uint8ClampedArray', 'Int16Array', 'Uint16Array',
+        'Int32Array', 'Uint32Array', 'Float32Array', 'Float64Array',
+        'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'Proxy', 'Reflect',
+        'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURI', 'decodeURI',
+        'encodeURIComponent', 'decodeURIComponent', 'escape', 'unescape',
+        'undefined', 'NaN', 'Infinity',
+        'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+        'queueMicrotask', 'atob', 'btoa', 'TextEncoder', 'TextDecoder',
+        'URL', 'URLSearchParams', 'console', 'performance', 'crypto'
+    ];
+    for (var p = 0; p < passThrough.length; p++) {
+        var key = passThrough[p];
+        try { win[key] = self[key]; } catch (e) {}
+    }
+
+    win.navigator = { userAgent: 'LuaWorker', language: 'en', platform: 'worker' };
+    win.location = { href: 'blob:lua-worker', protocol: 'blob:', pathname: '/', host: '', hostname: '', search: '', hash: '' };
+    win.history = { length: 1, state: null, pushState: emptyFn, replaceState: emptyFn, back: emptyFn, forward: emptyFn, go: emptyFn };
+
+    var doc = new win.HTMLDocument();
+    doc.currentScript = null;
+    doc.defaultView = win;
+    doc.documentElement = new win.HTMLHtmlElement();
+    doc.head = new win.HTMLHeadElement();
+    doc.body = new win.HTMLBodyElement();
+    doc.readyState = 'complete';
+    doc.getElementsByTagName = function () { return []; };
+    doc.getElementsByClassName = function () { return []; };
+    doc.getElementById = function () { return null; };
+    doc.querySelector = function () { return null; };
+    doc.querySelectorAll = function () { return []; };
+    doc.createElement = function (tag) {
+        var el = new win.HTMLElement();
+        el.tagName = String(tag || '').toUpperCase();
+        el.nodeName = el.tagName;
+        el.style = {};
+        el.setAttribute = emptyFn;
+        el.getAttribute = function () { return null; };
+        el.appendChild = function (c) { return c; };
+        el.removeChild = function (c) { return c; };
+        el.addEventListener = emptyFn;
+        el.removeEventListener = emptyFn;
+        return el;
+    };
+    doc.createElementNS = function (_ns, tag) { return doc.createElement(tag); };
+    doc.createTextNode = function (t) { var n = new win.Text(); n.data = String(t); return n; };
+    doc.createDocumentFragment = function () { return new win.DocumentFragment(); };
+    doc.addEventListener = emptyFn;
+    doc.removeEventListener = emptyFn;
+    doc.write = emptyFn;
+    doc.writeln = emptyFn;
+
+    win.document = doc;
+    win.window = win;
+    win.self = win;
+    win.global = win;
+    win.globalThis = win;
+    win.parent = win;
+    win.top = win;
+    win.frames = win;
+    win.name = 'lua-worker';
+    win.MutationObserver = function (callback) {
+        this.callback = callback;
+        this.observe = function () {};
+        this.disconnect = function () {};
+        this.takeRecords = function () { return []; };
+    };
+    win.IntersectionObserver = function () {
+        this.observe = function () {};
+        this.unobserve = function () {};
+        this.disconnect = function () {};
+    };
+    win.ResizeObserver = function () {
+        this.observe = function () {};
+        this.unobserve = function () {};
+        this.disconnect = function () {};
+    };
+    win.devicePixelRatio = 1;
+    win.innerWidth = 1024;
+    win.innerHeight = 768;
+    win.addEventListener = emptyFn;
+    win.removeEventListener = emptyFn;
+    win.dispatchEvent = function () { return true; };
+    win.getComputedStyle = function () { return {}; };
+    win.matchMedia = function () {
+        return { matches: false, addListener: emptyFn, removeListener: emptyFn, addEventListener: emptyFn, removeEventListener: emptyFn };
+    };
+    win.requestAnimationFrame = function (cb) { return self.setTimeout(function () { cb(Date.now()); }, 16); };
+    win.cancelAnimationFrame = function (id) { self.clearTimeout(id); };
+
+    return win;
+}
+
+function loadFengari(sourceText) {
+    var win = buildFakeWindow();
+    var ctorBind = [
+        'EventTarget', 'Node', 'Document', 'HTMLDocument', 'XMLDocument',
+        'DocumentFragment', 'Element', 'HTMLElement', 'SVGElement',
+        'HTMLCanvasElement', 'HTMLImageElement', 'HTMLScriptElement',
+        'HTMLDivElement', 'HTMLSpanElement', 'HTMLInputElement',
+        'HTMLTextAreaElement', 'HTMLBodyElement', 'HTMLHeadElement',
+        'HTMLHtmlElement', 'CharacterData', 'Text', 'Comment',
+        'Attr', 'NamedNodeMap', 'NodeList', 'HTMLCollection',
+        'DOMTokenList', 'CSSStyleDeclaration', 'Window', 'Navigator',
+        'Location', 'History', 'MutationObserver', 'Event', 'CustomEvent',
+        'MouseEvent', 'KeyboardEvent', 'DOMParser', 'XMLSerializer',
+        'IntersectionObserver', 'ResizeObserver'
+    ];
+
+    var prelude = ''
+        + 'var window = arguments[0];\\n'
+        + 'var self = window;\\n'
+        + 'var global = window;\\n'
+        + 'var globalThis = window;\\n'
+        + 'var document = window.document;\\n'
+        + 'var navigator = window.navigator;\\n'
+        + 'var location = window.location;\\n'
+        + 'var console = window.console;\\n';
+
+    for (var i = 0; i < ctorBind.length; i++) {
+        prelude += 'var ' + ctorBind[i] + ' = window.' + ctorBind[i] + ';\\n';
+    }
+
+    var loader = new Function(
+        prelude
+        + sourceText
+        + '\\n; return (typeof fengari !== "undefined" && fengari)'
+        + ' || window.fengari || self.fengari || global.fengari;'
+    );
+
+    var loaded = loader(win);
+    if (!loaded || typeof loaded.load !== 'function') {
+        throw new Error('fengari global missing after sandbox load');
+    }
+    loaded.__sandboxWindow = win;
+    return loaded;
+}
+
+self.onmessage = function (event) {
+    var msg = event.data;
+
+    if (msg.type === 'init-sab' && msg.sab) {
+        inputMeta = new Int32Array(msg.sab, 0, 2);
+        inputBytes = new Uint8Array(msg.sab, 8);
         return;
     }
 
-    const code = editor.getValue();
+    if (msg.type !== 'run') {
+        return;
+    }
 
     try {
+        if (!fengari) {
+            if (!msg.fengariSource) {
+                throw new Error('Missing fengari source');
+            }
+            fengari = loadFengari(msg.fengariSource);
+        }
+    } catch (err) {
+        self.postMessage({ type: 'console', level: 'error', text: 'Lua runtime failed to load (fengari). ' + (err && err.message ? err.message : err) });
+        self.postMessage({ type: 'done' });
+        return;
+    }
 
-        const prelude = `
-local js = require "js"
+    var sandboxWindow = fengari.__sandboxWindow;
 
-local function write_to_console(text, kind)
-    js.global:__luaWrite(tostring(text), kind)
-end
+    sandboxWindow.__luaWrite = function (text, type) {
+        if (text != null && typeof text !== 'string') {
+            if (fengari.to_jsstring) {
+                try { text = fengari.to_jsstring(text); } catch (e) { text = String(text); }
+            } else {
+                text = String(text);
+            }
+        }
+        self.postMessage({ type: 'console', level: type || 'log', text: text == null ? '' : String(text) });
+    };
 
-function print(...)
-    local n = select("#", ...)
-    local parts = {}
-    for i = 1, n do
-        parts[i] = tostring(select(i, ...))
-    end
-    write_to_console(table.concat(parts, "\\t"), "log")
-end
+    sandboxWindow.__luaInput = function (message) {
+        sandboxWindow.__luaWrite(String(message == null ? '>' : message), 'info');
+        var result = syncInput(message);
+        sandboxWindow.__luaWrite('> ' + result, 'log');
+        return result;
+    };
 
-function warn(...)
-    local n = select("#", ...)
-    local parts = {}
-    for i = 1, n do
-        parts[i] = tostring(select(i, ...))
-    end
-    write_to_console(table.concat(parts, "\\t"), "warn")
-end
+    try {
+        var luaPrelude = [
+            'local js = require "js"',
+            '',
+            'local function write_to_console(text, kind)',
+            '    js.global:__luaWrite(tostring(text), kind)',
+            'end',
+            '',
+            'function print(...)',
+            '    local n = select("#", ...)',
+            '    local parts = {}',
+            '    for i = 1, n do',
+            '        parts[i] = tostring(select(i, ...))',
+            '    end',
+            '    write_to_console(table.concat(parts, "\\t"), "log")',
+            'end',
+            '',
+            'function warn(...)',
+            '    local n = select("#", ...)',
+            '    local parts = {}',
+            '    for i = 1, n do',
+            '        parts[i] = tostring(select(i, ...))',
+            '    end',
+            '    write_to_console(table.concat(parts, "\\t"), "warn")',
+            'end',
+            '',
+            'function input(message)',
+            '    message = message or ">"',
+            '    local result = js.global:__luaInput(tostring(message))',
+            '    if result == nil then',
+            '        return ""',
+            '    end',
+            '    return tostring(result)',
+            'end',
+            ''
+        ].join('\\n');
 
-function input(message)
-    message = message or ">"
-    write_to_console(tostring(message), "info")
-    local result = js.global:prompt(tostring(message), "")
-    if result == nil then
-        return ""
-    end
-    write_to_console("> " .. tostring(result), "log")
-    return tostring(result)
-end
+        fengari.load(luaPrelude + '\\n' + msg.code)();
+    } catch (err) {
+        self.postMessage({ type: 'console', level: 'error', text: (err && err.message) ? err.message : String(err) });
+    }
+
+    self.postMessage({ type: 'done' });
+};
 `;
 
-        fengari.load(prelude + "\n" + code)();
+let fengariSourceText = null;
 
-    } catch (err) {
-        write(err.message || err.toString(), 'error');
+async function ensureFengariSource() {
+    if (fengariSourceText) {
+        return fengariSourceText;
     }
+
+    const sources = [
+        'https://unpkg.com/fengari-web@0.1.4/dist/fengari-web.js',
+        'https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js'
+    ];
+
+    let lastError = null;
+
+    for (let i = 0; i < sources.length; i++) {
+        try {
+            const res = await fetch(sources[i]);
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+            fengariSourceText = await res.text();
+            return fengariSourceText;
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error('Failed to fetch fengari-web');
+}
+
+function handleWorkerMessage(event) {
+    const msg = event.data;
+
+    if (msg.type === 'console') {
+        write(msg.text, msg.level || 'log');
+        return;
+    }
+
+    if (msg.type === 'prompt') {
+        const value = window.prompt(msg.message, '') || '';
+        if (inputSAB) {
+            const meta = new Int32Array(inputSAB, 0, 2);
+            const bytes = new Uint8Array(inputSAB, 8);
+            const encoded = new TextEncoder().encode(value);
+            const len = Math.min(encoded.length, bytes.length);
+            bytes.set(encoded.subarray(0, len));
+            meta[1] = len;
+            Atomics.store(meta, 0, 1);
+            Atomics.notify(meta, 0);
+        }
+        return;
+    }
+
+    if (msg.type === 'done') {
+        setRunning(false);
+        destroyWorker();
+    }
+}
+
+async function runCode() {
+
+    if (!editor) {
+        return;
+    }
+
+    if (isRunning) {
+        stopCode('Previous run aborted.');
+    }
+
+    clearTerminal();
+
+    let fengariSource;
+    try {
+        fengariSource = await ensureFengariSource();
+    } catch (err) {
+        write('Lua runtime failed to load (fengari). ' + (err && err.message ? err.message : err), 'error');
+        return;
+    }
+
+    const blob = new Blob([LUA_RUNNER_SOURCE], { type: 'application/javascript' });
+    runnerUrl = URL.createObjectURL(blob);
+    runnerWorker = new Worker(runnerUrl);
+
+    runnerWorker.onmessage = handleWorkerMessage;
+    runnerWorker.onerror = (err) => {
+        write(err.message || 'Worker error', 'error');
+        setRunning(false);
+        destroyWorker();
+    };
+
+    inputSAB = null;
+    try {
+        inputSAB = new SharedArrayBuffer(8 + 65536);
+        runnerWorker.postMessage({ type: 'init-sab', sab: inputSAB });
+    } catch (e) {
+        inputSAB = null;
+    }
+
+    setRunning(true);
+    runnerWorker.postMessage({
+        type: 'run',
+        code: editor.getValue(),
+        fengariSource: fengariSource
+    });
 }
 
 document.getElementById('textFileInput').addEventListener('change', event => {
@@ -391,6 +744,12 @@ window.addEventListener('hashchange', async () => {
 
     if (editor) {
         editor.setValue(code);
+    }
+});
+
+window.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
     }
 });
 </script>

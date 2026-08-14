@@ -6,7 +6,6 @@
 <title>Pixi.js IDE</title>
 
 <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js"></script>
 
 <style>
 * {
@@ -159,8 +158,8 @@ a.nav:hover {
     	<button onclick="exportProject()">Export</button>
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
-        <button onclick="stopCode()">Stop ⏹</button>
-        <button onclick="runCode()">Run ▶</button>
+        <button id="stopBtn" onclick="stopCode()" disabled>Stop ⏹</button>
+        <button id="runBtn" onclick="runCode()">Run ▶</button>
     </div>
 </header>
 
@@ -185,29 +184,9 @@ a.nav:hover {
 
 <script>
 let editor;
-let app;
-
-function stopCode() {
-	if(app){	
-		app.stop()
-    }
-}
-
-function initPixi() {
-
-    if (app) {
-        app.destroy(true);
-    }
-
-    app = new PIXI.Application({
-        resizeTo: document.getElementById('gameView'),
-        backgroundColor: 0x000000,
-        antialias: true
-    });
-
-    document.getElementById('gameView').innerHTML = '';
-    document.getElementById('gameView').appendChild(app.view);
-}
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
 
 window.MonacoEnvironment = {
     getWorkerUrl: function () {
@@ -221,6 +200,107 @@ require.config({
         vs: 'https://unpkg.com/monaco-editor@latest/min/vs'
     }
 });
+
+const RUNNER_SOURCE = `
+'use strict';
+
+function serializeArg(arg) {
+    if (arg instanceof Error) {
+        return arg.stack || String(arg);
+    }
+    if (typeof arg === 'object' && arg !== null) {
+        try {
+            return JSON.stringify(arg, null, 2);
+        } catch (e) {
+            return String(arg);
+        }
+    }
+    return String(arg);
+}
+
+function joinArgs(args) {
+    return Array.from(args).map(serializeArg).join(' ');
+}
+
+const customConsole = {
+    log: function () { self.postMessage({ type: 'console', level: 'log', text: joinArgs(arguments) }); },
+    error: function () { self.postMessage({ type: 'console', level: 'error', text: joinArgs(arguments) }); },
+    warn: function () { self.postMessage({ type: 'console', level: 'warn', text: joinArgs(arguments) }); },
+    info: function () { self.postMessage({ type: 'console', level: 'info', text: joinArgs(arguments) }); }
+};
+
+self.onmessage = async function (event) {
+    var msg = event.data;
+
+    if (msg.type !== 'run') {
+        return;
+    }
+
+    try {
+        importScripts('https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js');
+
+        if (typeof self.document === 'undefined') {
+            self.document = {
+                createElement: function () { return {}; },
+                body: { appendChild: function () {}, removeChild: function () {} },
+                head: { appendChild: function () {} },
+                getElementById: function () { return null; },
+                querySelector: function () { return null; },
+                querySelectorAll: function () { return []; },
+                addEventListener: function () {},
+                removeEventListener: function () {}
+            };
+        }
+        if (typeof self.window === 'undefined') {
+            self.window = self;
+        }
+
+        var app = new PIXI.Application({
+            view: msg.canvas,
+            width: msg.width,
+            height: msg.height,
+            backgroundColor: 0x000000,
+            antialias: true
+        });
+
+        var AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+        var fn = new AsyncFunction(
+            'console',
+            'PIXI',
+            'app',
+            'Math',
+            'Date',
+            'JSON',
+            'Array',
+            'Object',
+            'String',
+            'Number',
+            'Boolean',
+            msg.code
+        );
+
+        await fn(
+            customConsole,
+            PIXI,
+            app,
+            Math,
+            Date,
+            JSON,
+            Array,
+            Object,
+            String,
+            Number,
+            Boolean
+        );
+    } catch (err) {
+        self.postMessage({
+            type: 'error',
+            text: (err && err.stack) ? err.stack : String(err)
+        });
+    }
+};
+`;
 
 function saveProject() {
 	const content = editor.getValue();
@@ -317,46 +397,111 @@ function write(text, type = 'log') {
     term.scrollTop = term.scrollHeight;
 }
 
+function setRunning(running) {
+    isRunning = running;
+
+    const runBtn = document.getElementById('runBtn');
+    const stopBtn = document.getElementById('stopBtn');
+
+    if (runBtn) {
+        runBtn.disabled = running;
+    }
+    if (stopBtn) {
+        stopBtn.disabled = !running;
+    }
+}
+
+function clearGameView() {
+    document.getElementById('gameView').innerHTML = '';
+}
+
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
+    }
+
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+
+    clearGameView();
+}
+
+function handleWorkerMessage(event) {
+    const msg = event.data;
+
+    if (msg.type === 'console') {
+        write(msg.text, msg.level || 'log');
+        return;
+    }
+
+    if (msg.type === 'error') {
+        write(msg.text, 'error');
+    }
+}
+
+function stopCode() {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
+
+    destroyWorker();
+    setRunning(false);
+}
+
 async function runCode() {
+    if (!editor) {
+        return;
+    }
+
+    if (isRunning || runnerWorker) {
+        destroyWorker();
+        setRunning(false);
+    }
 
     clearTerminal();
-    initPixi();
 
+    const gameView = document.getElementById('gameView');
+    gameView.innerHTML = '';
+
+    const width = Math.max(1, gameView.clientWidth || 800);
+    const height = Math.max(1, gameView.clientHeight || 600);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    gameView.appendChild(canvas);
+
+    const offscreen = canvas.transferControlToOffscreen();
     const code = editor.getValue();
 
-    const sandbox = {
-        console: {
-            log: (...a) => write(a.join(' '), 'log'),
-            error: (...a) => write(a.join(' '), 'error'),
-            warn: (...a) => write(a.join(' '), 'warn'),
-            info: (...a) => write(a.join(' '), 'info')
-        },
+    const blob = new Blob([RUNNER_SOURCE], { type: 'application/javascript' });
+    runnerUrl = URL.createObjectURL(blob);
+    runnerWorker = new Worker(runnerUrl);
 
-        PIXI,
-        app,
-        Math,
-        Date,
-        JSON,
-        Array,
-        Object,
-        String,
-        Number,
-        Boolean
+    runnerWorker.onmessage = handleWorkerMessage;
+
+    runnerWorker.onerror = (err) => {
+        write(err.message || 'Worker error', 'error');
+        destroyWorker();
+        setRunning(false);
     };
 
-    try {
-        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-
-        const fn = new AsyncFunction(
-            ...Object.keys(sandbox),
-            code
-        );
-
-        await fn(...Object.values(sandbox));
-
-    } catch (err) {
-        write(err.stack || err.toString(), 'error');
-    }
+    setRunning(true);
+    runnerWorker.postMessage({
+        type: 'run',
+        code,
+        canvas: offscreen,
+        width,
+        height
+    }, [offscreen]);
 }
 
 document.getElementById('textFileInput').addEventListener('change', event => {
@@ -415,7 +560,12 @@ function exportProject() {
 }
 
 window.addEventListener("hashchange", hashProjectLoad);
-initPixi();
+
+window.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
+    }
+});
 </script>
 
 </body>

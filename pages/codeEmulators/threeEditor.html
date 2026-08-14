@@ -88,6 +88,7 @@ a.nav:hover {
 
     <div style="display:flex; gap:10px;">
         <button onclick="saveProject()">Save</button>
+        <button onclick="stopCode()">Stop ■</button>
         <button onclick="runCode()">Run ▶</button>
     </div>
 </header>
@@ -101,13 +102,125 @@ a.nav:hover {
 
     <div class="panel">
         <div class="title">3D Preview</div>
-        <iframe id="preview"></iframe>
+        <canvas id="preview"></canvas>
     </div>
 
 </div>
 
 <script>
 let editor;
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
+
+const RUNNER_SOURCE = `
+'use strict';
+
+self.onmessage = function (event) {
+    var msg = event.data;
+    if (!msg || msg.type !== 'run') {
+        return;
+    }
+
+    var canvas = msg.canvas;
+    var width = msg.width || 1;
+    var height = msg.height || 1;
+    var code = msg.code || '';
+    var threeUrl = msg.threeUrl;
+
+    try {
+        self.window = self;
+        self.devicePixelRatio = 1;
+        Object.defineProperty(self, 'innerWidth', {
+            configurable: true,
+            get: function () { return width; }
+        });
+        Object.defineProperty(self, 'innerHeight', {
+            configurable: true,
+            get: function () { return height; }
+        });
+
+        var noopEl = {
+            style: {},
+            appendChild: function (el) { return el; },
+            removeChild: function (el) { return el; },
+            setAttribute: function () {},
+            getAttribute: function () { return null; },
+            addEventListener: function () {},
+            removeEventListener: function () {}
+        };
+
+        self.document = {
+            body: noopEl,
+            head: noopEl,
+            documentElement: noopEl,
+            createElement: function (tag) {
+                if (String(tag).toLowerCase() === 'canvas') {
+                    return canvas;
+                }
+                return {
+                    style: {},
+                    appendChild: function (el) { return el; },
+                    removeChild: function (el) { return el; },
+                    setAttribute: function () {},
+                    getAttribute: function () { return null; },
+                    addEventListener: function () {},
+                    removeEventListener: function () {}
+                };
+            },
+            createElementNS: function (_ns, tag) {
+                return self.document.createElement(tag);
+            },
+            getElementById: function () { return null; },
+            querySelector: function () { return null; },
+            querySelectorAll: function () { return []; },
+            addEventListener: function () {},
+            removeEventListener: function () {}
+        };
+
+        importScripts(threeUrl);
+
+        // OffscreenCanvas has no DOM style; Three's setSize writes style.width/height by default.
+        if (!canvas.style) {
+            try {
+                Object.defineProperty(canvas, 'style', {
+                    value: {},
+                    writable: true,
+                    configurable: true
+                });
+            } catch (e) {
+                canvas.style = {};
+            }
+        }
+
+        var OrigWebGLRenderer = THREE.WebGLRenderer;
+        var origSetSize = OrigWebGLRenderer.prototype.setSize;
+        OrigWebGLRenderer.prototype.setSize = function (w, h, updateStyle) {
+            // Never touch domElement.style in a worker (OffscreenCanvas has none).
+            return origSetSize.call(this, w, h, false);
+        };
+
+        THREE.WebGLRenderer = function (parameters) {
+            parameters = Object.assign({}, parameters || {});
+            if (!parameters.canvas) {
+                parameters.canvas = canvas;
+            }
+            return new OrigWebGLRenderer(parameters);
+        };
+        THREE.WebGLRenderer.prototype = OrigWebGLRenderer.prototype;
+        Object.keys(OrigWebGLRenderer).forEach(function (key) {
+            THREE.WebGLRenderer[key] = OrigWebGLRenderer[key];
+        });
+
+        (0, eval)(code);
+    } catch (err) {
+        self.postMessage({
+            type: 'error',
+            text: (err && err.stack) ? err.stack : String(err)
+        });
+    }
+};
+`;
 
 window.MonacoEnvironment = {
     getWorkerUrl: function () {
@@ -140,35 +253,96 @@ function saveProject() {
     document.body.removeChild(link);
 }
 
-function runCode() {
-    const code = editor.getValue();
-
-    const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-    body{
-    margin:0;
-    overflow:hidden;
-    background:black;
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
     }
-    </style>
 
-    <script src="/pages/codeEmulators/Libraries/three.js"><\/script>
-    </head>
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+}
 
-    <body>
+function resetPreviewCanvas() {
+    const old = document.getElementById('preview');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'preview';
+    old.parentNode.replaceChild(canvas, old);
+    return canvas;
+}
 
-    <script>
-    ${code}
-    <\/script>
+function stopCode() {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
 
-    </body>
-    </html>
-    `;
+    destroyWorker();
+    isRunning = false;
+    resetPreviewCanvas();
+}
 
-    document.getElementById("preview").srcdoc = html;
+function runCode() {
+    if (!editor) {
+        return;
+    }
+
+    destroyWorker();
+    isRunning = false;
+
+    const canvas = resetPreviewCanvas();
+
+    // Wait a frame so flex layout has sized #preview before transfer.
+    requestAnimationFrame(function () {
+        if (document.getElementById('preview') !== canvas) {
+            return;
+        }
+
+        const width = Math.max(1, canvas.clientWidth || (canvas.parentElement && canvas.parentElement.clientWidth) || 1);
+        const height = Math.max(1, canvas.clientHeight || (canvas.parentElement && canvas.parentElement.clientHeight) || 1);
+
+        let offscreen;
+        try {
+            offscreen = canvas.transferControlToOffscreen();
+        } catch (err) {
+            console.error(err);
+            return;
+        }
+
+        const code = editor.getValue();
+        const threeUrl = new URL('/pages/codeEmulators/Libraries/three.js', self.location.origin).href;
+
+        const blob = new Blob([RUNNER_SOURCE], { type: 'application/javascript' });
+        runnerUrl = URL.createObjectURL(blob);
+        runnerWorker = new Worker(runnerUrl);
+
+        runnerWorker.onmessage = function (event) {
+            const msg = event.data;
+            if (msg && msg.type === 'error') {
+                console.error(msg.text);
+            }
+        };
+
+        runnerWorker.onerror = function (err) {
+            console.error(err.message || 'Worker error');
+            destroyWorker();
+            isRunning = false;
+            resetPreviewCanvas();
+        };
+
+        isRunning = true;
+        runnerWorker.postMessage({
+            type: 'run',
+            canvas: offscreen,
+            width: width,
+            height: height,
+            code: code,
+            threeUrl: threeUrl
+        }, [offscreen]);
+    });
 }
 
 hashProjectLoad().then(result => {
@@ -247,6 +421,12 @@ animate();
 }
 
 window.addEventListener("hashchange", hashProjectLoad);
+
+window.addEventListener('keydown', function (e) {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
+    }
+});
 </script>
 
 </body>

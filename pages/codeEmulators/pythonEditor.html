@@ -112,7 +112,8 @@ a.nav:hover {
     	<input type="file" id="textFileInput">
     	<button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
-    	<button onclick="runCode()">Run ▶</button>
+        <button id="stopBtn" onclick="stopCode()" disabled>Stop ■</button>
+    	<button id="runBtn" onclick="runCode()">Run ▶</button>
     </div>
 </header>
 
@@ -130,6 +131,12 @@ a.nav:hover {
 
 <script>
 let editor;
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
+let activePromptInput = null;
+let promptSeq = 0;
+const pendingPrompts = new Map();
 
 window.MonacoEnvironment = {
     getWorkerUrl: function () {
@@ -211,6 +218,43 @@ function write(text) {
     term.scrollTop = term.scrollHeight;
 }
 
+function setRunning(running) {
+    isRunning = running;
+    document.getElementById('runBtn').disabled = running;
+    document.getElementById('stopBtn').disabled = !running;
+}
+
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
+    }
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+    if (activePromptInput) {
+        activePromptInput.disabled = true;
+        activePromptInput = null;
+    }
+    pendingPrompts.clear();
+}
+
+function stopCode(reason) {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
+    destroyWorker();
+    setRunning(false);
+    if (reason) {
+        write(reason);
+    } else {
+        write('Execution stopped.');
+    }
+}
+
 function inputTerminal(promptText) {
     return new Promise(resolve => {
         const term = document.getElementById("terminal");
@@ -229,12 +273,16 @@ function inputTerminal(promptText) {
         line.appendChild(input);
         term.appendChild(line);
 
+        activePromptInput = input;
         input.focus();
 
         input.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 const val = input.value;
                 input.disabled = true;
+                if (activePromptInput === input) {
+                    activePromptInput = null;
+                }
                 write(val);
                 resolve(val);
             }
@@ -242,15 +290,50 @@ function inputTerminal(promptText) {
     });
 }
 
-function builtinRead(x) {
-    if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
-        throw "File not found: '" + x + "'";
-    return Sk.builtinFiles["files"][x];
-}
+const PYTHON_RUNNER_SOURCE = `
+'use strict';
 
-async function runCode() {
-    const term = document.getElementById("terminal");
-    term.innerHTML = "";
+var skulptBase = self.location ? '' : '';
+
+self.onmessage = async function (event) {
+    var msg = event.data;
+    if (msg.type !== 'run') return;
+
+    try {
+        importScripts(msg.skulptMin, msg.skulptStdlib);
+    } catch (err) {
+        self.postMessage({ type: 'error', text: 'Failed to load Skulpt: ' + (err && err.message ? err.message : err) });
+        self.postMessage({ type: 'done' });
+        return;
+    }
+
+    var pending = {};
+
+    self.onmessage = function (e) {
+        var m = e.data;
+        if (m.type === 'input-response' && pending[m.id]) {
+            pending[m.id](m.value);
+            delete pending[m.id];
+        }
+    };
+
+    function write(text) {
+        self.postMessage({ type: 'output', text: text == null ? '' : String(text) });
+    }
+
+    function inputTerminal(promptText) {
+        return new Promise(function (resolve) {
+            var id = Math.random().toString(36).slice(2);
+            pending[id] = resolve;
+            self.postMessage({ type: 'input-request', id: id, prompt: promptText == null ? '' : String(promptText) });
+        });
+    }
+
+    function builtinRead(x) {
+        if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+            throw "File not found: '" + x + "'";
+        return Sk.builtinFiles["files"][x];
+    }
 
     Sk.configure({
         output: write,
@@ -260,12 +343,82 @@ async function runCode() {
     });
 
     try {
-        await Sk.misceval.asyncToPromise(() =>
-            Sk.importMainWithBody("<stdin>", false, editor.getValue(), true)
-        );
+        await Sk.misceval.asyncToPromise(function () {
+            return Sk.importMainWithBody("<stdin>", false, msg.code, true);
+        });
     } catch (e) {
-        write(e.toString());
+        self.postMessage({ type: 'error', text: String(e) });
     }
+
+    self.postMessage({ type: 'done' });
+};
+`;
+
+function handleWorkerMessage(event) {
+    const msg = event.data;
+
+    if (msg.type === 'output') {
+        write(msg.text);
+        return;
+    }
+
+    if (msg.type === 'error') {
+        write(msg.text);
+        return;
+    }
+
+    if (msg.type === 'input-request') {
+        inputTerminal(msg.prompt).then(value => {
+            if (runnerWorker) {
+                runnerWorker.postMessage({
+                    type: 'input-response',
+                    id: msg.id,
+                    value
+                });
+            }
+        });
+        return;
+    }
+
+    if (msg.type === 'done') {
+        setRunning(false);
+        destroyWorker();
+    }
+}
+
+async function runCode() {
+    if (!editor) {
+        return;
+    }
+
+    if (isRunning) {
+        stopCode('Previous run aborted.');
+    }
+
+    const term = document.getElementById("terminal");
+    term.innerHTML = "";
+
+    const skulptMin = new URL('/pages/codeEmulators/Libraries/skulpt.min.js', window.location.origin).href;
+    const skulptStdlib = new URL('/pages/codeEmulators/Libraries/skulpt-stdlib.js', window.location.origin).href;
+
+    const blob = new Blob([PYTHON_RUNNER_SOURCE], { type: 'application/javascript' });
+    runnerUrl = URL.createObjectURL(blob);
+    runnerWorker = new Worker(runnerUrl);
+
+    runnerWorker.onmessage = handleWorkerMessage;
+    runnerWorker.onerror = (err) => {
+        write(err.message || 'Worker error');
+        setRunning(false);
+        destroyWorker();
+    };
+
+    setRunning(true);
+    runnerWorker.postMessage({
+        type: 'run',
+        code: editor.getValue(),
+        skulptMin,
+        skulptStdlib
+    });
 }
 
 document.getElementById('textFileInput').addEventListener('change', function(event) {
@@ -281,6 +434,12 @@ document.getElementById('textFileInput').addEventListener('change', function(eve
 });
 
 window.addEventListener("hashchange", hashProjectLoad);
+
+window.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
+    }
+});
 </script>
 
 </body>

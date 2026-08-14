@@ -54,6 +54,29 @@ button {
     cursor: pointer;
 }
 
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+button.stop {
+    background: #c92a2a;
+}
+
+button.stop:not(:disabled):hover {
+    background: #a61e1e;
+}
+
+.status {
+    font-size: 12px;
+    color: #adb5bd;
+    min-width: 72px;
+}
+
+.status.running {
+    color: #ffd166;
+}
+
 input[type="file"] {
     color: white;
 }
@@ -126,6 +149,11 @@ input.terminal-input {
     color: #7bdff2;
 }
 
+.system {
+    color: #868e96;
+    font-style: italic;
+}
+
 a.nav {
     color: #7bdff2;
     text-decoration: none;
@@ -151,7 +179,9 @@ a.nav:hover {
         <input type="file" id="textFileInput" />
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
-        <button onclick="runCode()">Run ▶</button>
+        <span id="runStatus" class="status" aria-live="polite"></span>
+        <button id="stopBtn" class="stop" onclick="stopCode()" disabled>Stop ■</button>
+        <button id="runBtn" onclick="runCode()">Run ▶</button>
     </div>
 </header>
 
@@ -171,6 +201,10 @@ a.nav:hover {
 
 <script>
 let editor;
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
+let activePromptInput = null;
 
 // Monaco worker fix
 window.MonacoEnvironment = {
@@ -209,6 +243,126 @@ async function loadData() {
 }
 
 loadData().then(console.log);
+`;
+
+const RUNNER_SOURCE = `
+'use strict';
+
+function serializeArg(arg) {
+    if (arg instanceof Error) {
+        return arg.stack || String(arg);
+    }
+    if (typeof arg === 'object' && arg !== null) {
+        try {
+            return JSON.stringify(arg, null, 2);
+        } catch (e) {
+            return String(arg);
+        }
+    }
+    return String(arg);
+}
+
+function joinArgs(args) {
+    return Array.from(args).map(serializeArg).join(' ');
+}
+
+const customConsole = {
+    log: function () { self.postMessage({ type: 'console', level: 'log', text: joinArgs(arguments) }); },
+    error: function () { self.postMessage({ type: 'console', level: 'error', text: joinArgs(arguments) }); },
+    warn: function () { self.postMessage({ type: 'console', level: 'warn', text: joinArgs(arguments) }); },
+    info: function () { self.postMessage({ type: 'console', level: 'info', text: joinArgs(arguments) }); }
+};
+
+const pendingPrompts = new Map();
+let promptSeq = 0;
+
+function prompt(message) {
+    if (message === undefined || message === null) {
+        message = 'Input:';
+    }
+    return new Promise(function (resolve, reject) {
+        var promptId = ++promptSeq;
+        pendingPrompts.set(promptId, { resolve: resolve, reject: reject });
+        self.postMessage({ type: 'prompt', promptId: promptId, message: String(message) });
+    });
+}
+
+self.onmessage = async function (event) {
+    var msg = event.data;
+
+    if (msg.type === 'prompt-response') {
+        var pending = pendingPrompts.get(msg.promptId);
+        if (pending) {
+            pendingPrompts.delete(msg.promptId);
+            pending.resolve(msg.value);
+        }
+        return;
+    }
+
+    if (msg.type === 'prompt-cancel') {
+        pendingPrompts.forEach(function (p) {
+            p.reject(new Error('Prompt cancelled'));
+        });
+        pendingPrompts.clear();
+        return;
+    }
+
+    if (msg.type !== 'run') {
+        return;
+    }
+
+    try {
+        var AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+        var fn = new AsyncFunction(
+            'console',
+            'setTimeout',
+            'setInterval',
+            'clearTimeout',
+            'clearInterval',
+            'Promise',
+            'Math',
+            'Date',
+            'JSON',
+            'Array',
+            'Object',
+            'String',
+            'Number',
+            'Boolean',
+            'RegExp',
+            'fetch',
+            'prompt',
+            msg.code
+        );
+
+        await fn(
+            customConsole,
+            setTimeout,
+            setInterval,
+            clearTimeout,
+            clearInterval,
+            Promise,
+            Math,
+            Date,
+            JSON,
+            Array,
+            Object,
+            String,
+            Number,
+            Boolean,
+            RegExp,
+            fetch,
+            prompt
+        );
+
+        self.postMessage({ type: 'done' });
+    } catch (err) {
+        self.postMessage({
+            type: 'error',
+            text: (err && err.stack) ? err.stack : String(err)
+        });
+        self.postMessage({ type: 'done' });
+    }
+};
 `;
 
 hashProjectLoad().then(result => {
@@ -296,6 +450,38 @@ function write(text, type = 'log') {
     term.scrollTop = term.scrollHeight;
 }
 
+function setRunning(running) {
+    isRunning = running;
+
+    const runBtn = document.getElementById('runBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('runStatus');
+
+    runBtn.disabled = running;
+    stopBtn.disabled = !running;
+    status.textContent = running ? 'Running…' : '';
+    status.classList.toggle('running', running);
+}
+
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
+    }
+
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+
+    if (activePromptInput) {
+        activePromptInput.disabled = true;
+        activePromptInput = null;
+    }
+}
+
 function createPrompt(questionText = '') {
 
     return new Promise(resolve => {
@@ -317,6 +503,7 @@ function createPrompt(questionText = '') {
 
         term.appendChild(line);
 
+        activePromptInput = input;
         input.focus();
 
         input.addEventListener('keydown', e => {
@@ -326,6 +513,9 @@ function createPrompt(questionText = '') {
                 const value = input.value;
 
                 input.disabled = true;
+                if (activePromptInput === input) {
+                    activePromptInput = null;
+                }
 
                 resolve(value);
             }
@@ -335,60 +525,75 @@ function createPrompt(questionText = '') {
     });
 }
 
+function handleWorkerMessage(event) {
+    const msg = event.data;
+
+    if (msg.type === 'console') {
+        write(msg.text, msg.level || 'log');
+        return;
+    }
+
+    if (msg.type === 'error') {
+        write(msg.text, 'error');
+        return;
+    }
+
+    if (msg.type === 'prompt') {
+        createPrompt(msg.message).then(value => {
+            if (runnerWorker) {
+                runnerWorker.postMessage({
+                    type: 'prompt-response',
+                    promptId: msg.promptId,
+                    value
+                });
+            }
+        });
+        return;
+    }
+
+    if (msg.type === 'done') {
+        setRunning(false);
+        destroyWorker();
+    }
+}
+
+function stopCode(reason = 'Execution stopped.') {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
+
+    destroyWorker();
+    setRunning(false);
+    write(reason, 'system');
+}
+
 async function runCode() {
+    if (!editor) {
+        return;
+    }
+
+    if (isRunning) {
+        stopCode('Previous run aborted.');
+    }
 
     clearTerminal();
 
     const code = editor.getValue();
 
-    const customConsole = {
-        log: (...args) => write(args.join(' '), 'log'),
-        error: (...args) => write(args.join(' '), 'error'),
-        warn: (...args) => write(args.join(' '), 'warn'),
-        info: (...args) => write(args.join(' '), 'info')
+    const blob = new Blob([RUNNER_SOURCE], { type: 'application/javascript' });
+    runnerUrl = URL.createObjectURL(blob);
+    runnerWorker = new Worker(runnerUrl);
+
+    runnerWorker.onmessage = handleWorkerMessage;
+
+    runnerWorker.onerror = (err) => {
+        write(err.message || 'Worker error', 'error');
+        setRunning(false);
+        destroyWorker();
     };
 
-    const sandbox = {
-        console: customConsole,
-
-        setTimeout,
-        setInterval,
-        clearTimeout,
-        clearInterval,
-
-        Promise,
-        Math,
-        Date,
-        JSON,
-        Array,
-        Object,
-        String,
-        Number,
-        Boolean,
-        RegExp,
-
-        fetch,
-
-        prompt: async (message = 'Input:') => {
-            return await createPrompt(message);
-        }
-    };
-
-    try {
-
-        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-
-        const fn = new AsyncFunction(
-            ...Object.keys(sandbox),
-            code
-        );
-
-        await fn(...Object.values(sandbox));
-
-    } catch (err) {
-
-        write(err.stack || err.toString(), 'error');
-    }
+    setRunning(true);
+    runnerWorker.postMessage({ type: 'run', code });
 }
 
 // File upload
@@ -416,6 +621,12 @@ window.addEventListener('hashchange', async () => {
 
     if (editor) {
         editor.setValue(code);
+    }
+});
+
+window.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
     }
 });
 </script>

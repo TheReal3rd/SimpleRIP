@@ -139,7 +139,8 @@ a.nav:hover {
 
         <button onclick="saveProject()">Save</button>
         <button onclick="clearTerminal()">Clear</button>
-        <button onclick="runCode()">Run ▶</button>
+        <button id="stopBtn" onclick="stopCode()" disabled>Stop ■</button>
+        <button id="runBtn" onclick="runCode()">Run ▶</button>
     </div>
 </header>
 
@@ -159,6 +160,9 @@ a.nav:hover {
 
 <script>
 let editor;
+let runnerWorker = null;
+let runnerUrl = null;
+let isRunning = false;
 
 window.MonacoEnvironment = {
     getWorkerUrl: function () {
@@ -289,18 +293,111 @@ function needsStdin(code) {
     return /\b(scanf|gets|getchar|cin\s*>>)/.test(code);
 }
 
-async function runCode() {
+function setRunning(running) {
+    isRunning = running;
+    document.getElementById('runBtn').disabled = running;
+    document.getElementById('stopBtn').disabled = !running;
+}
 
-    clearTerminal();
+function destroyWorker() {
+    if (runnerWorker) {
+        runnerWorker.onmessage = null;
+        runnerWorker.onerror = null;
+        runnerWorker.terminate();
+        runnerWorker = null;
+    }
+    if (runnerUrl) {
+        URL.revokeObjectURL(runnerUrl);
+        runnerUrl = null;
+    }
+}
+
+function stopCode(reason) {
+    if (!isRunning && !runnerWorker) {
+        return;
+    }
+    destroyWorker();
+    setRunning(false);
+    write(reason || 'Execution stopped.', 'warn');
+}
+
+const C_RUNNER_SOURCE = `
+'use strict';
+
+var window = self;
+var document = self;
+
+self.onmessage = function (event) {
+    var msg = event.data;
+    if (msg.type !== 'run') return;
+
+    try {
+        importScripts(msg.jscppUrl);
+        importScripts(msg.runtimeUrl);
+    } catch (err) {
+        self.postMessage({ type: 'console', level: 'error', text: 'Failed to load C runtime: ' + (err && err.message ? err.message : err) });
+        self.postMessage({ type: 'done' });
+        return;
+    }
 
     if (typeof JSCPP === 'undefined' || typeof JSCPP.run !== 'function') {
-        write('C runtime failed to load (JSCPP). Refresh the page.', 'error');
+        self.postMessage({ type: 'console', level: 'error', text: 'C runtime failed to load (JSCPP). Refresh the page.' });
+        self.postMessage({ type: 'done' });
         return;
     }
 
     if (typeof CIdeRuntime === 'undefined' || !CIdeRuntime.ensureHeapExtensions(JSCPP)) {
-        write('Warning: c-runtime.js heap extensions not loaded.', 'warn');
+        self.postMessage({ type: 'console', level: 'warn', text: 'Warning: c-runtime.js heap extensions not loaded.' });
     }
+
+    try {
+        var result = CIdeRuntime.runC(JSCPP, msg.code, msg.stdin || '');
+        var buffer = result.stdout || '';
+
+        if (buffer.length) {
+            var parts = buffer.replace(/\\r\\n/g, '\\n').split('\\n');
+            for (var i = 0; i < parts.length; i++) {
+                if (i === parts.length - 1 && parts[i] === '') {
+                    continue;
+                }
+                self.postMessage({ type: 'console', level: 'log', text: parts[i] });
+            }
+        }
+
+        self.postMessage({ type: 'console', level: 'info', text: 'Program exited with code ' + result.exitCode });
+    } catch (err) {
+        self.postMessage({ type: 'console', level: 'error', text: (err && err.message) ? err.message : String(err) });
+    }
+
+    self.postMessage({ type: 'done' });
+};
+`;
+
+function handleWorkerMessage(event) {
+    const msg = event.data;
+
+    if (msg.type === 'console') {
+        write(msg.text, msg.level || 'log');
+        return;
+    }
+
+    if (msg.type === 'done') {
+        setRunning(false);
+        destroyWorker();
+    }
+}
+
+async function runCode() {
+
+    if (!editor) {
+        return;
+    }
+
+    if (isRunning) {
+        stopCode('Previous run aborted.');
+    }
+
+    clearTerminal();
 
     const code = editor.getValue();
     let stdin = '';
@@ -315,25 +412,25 @@ async function runCode() {
         write('stdin: ' + JSON.stringify(stdin), 'info');
     }
 
-    try {
-        const result = CIdeRuntime.runC(JSCPP, code, stdin);
-        const buffer = result.stdout || '';
+    const blob = new Blob([C_RUNNER_SOURCE], { type: 'application/javascript' });
+    runnerUrl = URL.createObjectURL(blob);
+    runnerWorker = new Worker(runnerUrl);
 
-        if (buffer.length) {
-            const parts = buffer.replace(/\r\n/g, '\n').split('\n');
-            for (let i = 0; i < parts.length; i++) {
-                if (i === parts.length - 1 && parts[i] === '') {
-                    continue;
-                }
-                write(parts[i], 'log');
-            }
-        }
+    runnerWorker.onmessage = handleWorkerMessage;
+    runnerWorker.onerror = (err) => {
+        write(err.message || 'Worker error', 'error');
+        setRunning(false);
+        destroyWorker();
+    };
 
-        write('Program exited with code ' + result.exitCode, 'info');
-
-    } catch (err) {
-        write(err.message || err.toString(), 'error');
-    }
+    setRunning(true);
+    runnerWorker.postMessage({
+        type: 'run',
+        code,
+        stdin,
+        jscppUrl: 'https://cdn.jsdelivr.net/npm/JSCPP@2.0.6/dist/JSCPP.es5.min.js',
+        runtimeUrl: new URL('/pages/codeEmulators/Libraries/c-runtime.js', window.location.origin).href
+    });
 }
 
 document.getElementById('textFileInput').addEventListener('change', event => {
@@ -359,6 +456,12 @@ window.addEventListener('hashchange', async () => {
 
     if (editor) {
         editor.setValue(code);
+    }
+});
+
+window.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.key === 'Esc') && isRunning) {
+        stopCode();
     }
 });
 </script>

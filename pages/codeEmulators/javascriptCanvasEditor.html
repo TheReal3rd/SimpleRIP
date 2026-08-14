@@ -43,6 +43,11 @@
         border-radius: 5px;
       }
 
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
       #editor {
         flex: 1;
       }
@@ -81,7 +86,8 @@
         <input type="file" id="textFileInput" style="display: none;" />
         <button onclick="loadProject()">Load</button>
         <button onclick="saveProject()">Save</button>
-        <button onclick="run()"> Run ▶ </button>
+        <button id="runBtn" onclick="run()"> Run ▶ </button>
+        <button id="stopBtn" onclick="stop()" disabled> Stop ■ </button>
       </header>
       <div id="editor"></div>
     </div>
@@ -134,96 +140,7 @@
       const WIDTH = 128;
       const HEIGHT = 128;
       const SCALE = 5;
-      const canvas = document.getElementById("screen");
-      canvas.width = WIDTH;
-      canvas.height = HEIGHT;
-      canvas.style.width = WIDTH * SCALE + "px";
-      canvas.style.height = HEIGHT * SCALE + "px";
-      const ctx = canvas.getContext("2d");
-      ctx.imageSmoothingEnabled = false;
 
-      function clear(color = "black") {
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      }
-
-      function pixel(x, y, color = "white") {
-        x |= 0;
-        y |= 0;
-        if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) return;
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, 1, 1);
-      }
-
-      function line(x0, y0, x1, y1, color = "white") {
-        x0 |= 0;
-        y0 |= 0;
-        x1 |= 0;
-        y1 |= 0;
-        let dx = Math.abs(x1 - x0);
-        let sx = x0 < x1 ? 1 : -1;
-        let dy = -Math.abs(y1 - y0);
-        let sy = y0 < y1 ? 1 : -1;
-        let err = dx + dy;
-        while (true) {
-          pixel(x0, y0, color);
-          if (x0 === x1 && y0 === y1) break;
-          let e2 = err * 2;
-          if (e2 >= dy) {
-            err += dy;
-            x0 += sx;
-          }
-          if (e2 <= dx) {
-            err += dx;
-            y0 += sy;
-          }
-        }
-      }
-
-      function rect(x, y, w, h, color) {
-        line(x, y, x + w, y, color);
-        line(x + w, y, x + w, y + h, color);
-        line(x + w, y + h, x, y + h, color);
-        line(x, y + h, x, y, color);
-      }
-
-      function fillRect(x, y, w, h, color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, w, h);
-      }
-
-      function circle(cx, cy, r, color) {
-        let x = r;
-        let y = 0;
-        let err = 0;
-        while (x >= y) {
-          pixel(cx + x, cy + y, color);
-          pixel(cx + y, cy + x, color);
-          pixel(cx - y, cy + x, color);
-          pixel(cx - x, cy + y, color);
-          pixel(cx - x, cy - y, color);
-          pixel(cx - y, cy - x, color);
-          pixel(cx + y, cy - x, color);
-          pixel(cx + x, cy - y, color);
-          y++;
-          if (err <= 0) {
-            err += 2 * y + 1;
-          } else {
-            x--;
-            err -= 2 * x + 1;
-          }
-        }
-      }
-
-      function fillCircle(cx, cy, r, color) {
-        for (let y = -r; y <= r; y++) {
-          for (let x = -r; x <= r; x++) {
-            if (x * x + y * y <= r * r) {
-              pixel(cx + x, cy + y, color);
-            }
-          }
-        }
-      }
     const FONT = { // May god have mercy upon my soul.
         // Letters
         "A":["010","101","111","101","101"],
@@ -298,116 +215,370 @@
 
     };
 
-      function text(x, y, str, color = "white") {
-        str = str.toUpperCase();
-        for (const ch of str) {
-          const glyph = FONT[ch];
-          if (!glyph) {
-            x += 4;
-            continue;
-          }
-          for (let gy = 0; gy < glyph.length; gy++) {
-            for (let gx = 0; gx < glyph[gy].length; gx++) {
-              if (glyph[gy][gx] == "1") {
-                pixel(x + gx, y + gy, color);
-              }
-            }
-          }
-          x += 4;
+      const RUNNER_SOURCE = `
+'use strict';
+
+const WIDTH = ${WIDTH};
+const HEIGHT = ${HEIGHT};
+const FONT = ${JSON.stringify(FONT)};
+
+let ctx = null;
+let keys = {};
+const mouse = { x: 0, y: 0, left: false };
+let deltaTime = 0;
+let animationId = null;
+let drawFunction = null;
+let lastTime = 0;
+
+function clear(color) {
+  if (color === undefined) color = "black";
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+}
+
+function pixel(x, y, color) {
+  if (color === undefined) color = "white";
+  x |= 0;
+  y |= 0;
+  if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) return;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 1, 1);
+}
+
+function line(x0, y0, x1, y1, color) {
+  if (color === undefined) color = "white";
+  x0 |= 0;
+  y0 |= 0;
+  x1 |= 0;
+  y1 |= 0;
+  let dx = Math.abs(x1 - x0);
+  let sx = x0 < x1 ? 1 : -1;
+  let dy = -Math.abs(y1 - y0);
+  let sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  while (true) {
+    pixel(x0, y0, color);
+    if (x0 === x1 && y0 === y1) break;
+    let e2 = err * 2;
+    if (e2 >= dy) {
+      err += dy;
+      x0 += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
+function rect(x, y, w, h, color) {
+  line(x, y, x + w, y, color);
+  line(x + w, y, x + w, y + h, color);
+  line(x + w, y + h, x, y + h, color);
+  line(x, y + h, x, y, color);
+}
+
+function fillRect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+
+function circle(cx, cy, r, color) {
+  let x = r;
+  let y = 0;
+  let err = 0;
+  while (x >= y) {
+    pixel(cx + x, cy + y, color);
+    pixel(cx + y, cy + x, color);
+    pixel(cx - y, cy + x, color);
+    pixel(cx - x, cy + y, color);
+    pixel(cx - x, cy - y, color);
+    pixel(cx - y, cy - x, color);
+    pixel(cx + y, cy - x, color);
+    pixel(cx + x, cy - y, color);
+    y++;
+    if (err <= 0) {
+      err += 2 * y + 1;
+    } else {
+      x--;
+      err -= 2 * x + 1;
+    }
+  }
+}
+
+function fillCircle(cx, cy, r, color) {
+  for (let y = -r; y <= r; y++) {
+    for (let x = -r; x <= r; x++) {
+      if (x * x + y * y <= r * r) {
+        pixel(cx + x, cy + y, color);
+      }
+    }
+  }
+}
+
+function text(x, y, str, color) {
+  if (color === undefined) color = "white";
+  str = str.toUpperCase();
+  for (const ch of str) {
+    const glyph = FONT[ch];
+    if (!glyph) {
+      x += 4;
+      continue;
+    }
+    for (let gy = 0; gy < glyph.length; gy++) {
+      for (let gx = 0; gx < glyph[gy].length; gx++) {
+        if (glyph[gy][gx] == "1") {
+          pixel(x + gx, y + gy, color);
         }
       }
+    }
+    x += 4;
+  }
+}
+
+function showRuntimeError() {
+  clear("#330000");
+  ctx.fillStyle = "white";
+  ctx.font = "10px monospace";
+  ctx.fillText("Runtime Error", 4, 12);
+}
+
+const gfx = {
+  width: WIDTH,
+  height: HEIGHT,
+  pixel: pixel,
+  line: line,
+  rect: rect,
+  fillRect: fillRect,
+  circle: circle,
+  fillCircle: fillCircle,
+  clear: clear,
+  text: text,
+  mouse: mouse,
+  deltaTime: 0,
+  keyDown: function(key) {
+    return !!keys[key];
+  },
+  start: function(draw) {
+    drawFunction = draw;
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+    lastTime = performance.now();
+
+    function frame(time) {
+      deltaTime = (time - lastTime) / 1000;
+      lastTime = time;
+      gfx.deltaTime = deltaTime;
+      if (drawFunction) {
+        try {
+          drawFunction();
+        } catch (err) {
+          gfx.stop();
+          showRuntimeError();
+          self.postMessage({ type: "error", text: String(err && err.stack ? err.stack : err) });
+          return;
+        }
+      }
+      animationId = requestAnimationFrame(frame);
+    }
+    animationId = requestAnimationFrame(frame);
+  },
+  stop: function() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+};
+
+self.onmessage = function(event) {
+  var msg = event.data;
+
+  if (msg.type === "input") {
+    keys = msg.keys || keys;
+    if (msg.mouse) {
+      mouse.x = msg.mouse.x;
+      mouse.y = msg.mouse.y;
+      mouse.left = msg.mouse.left;
+    }
+    return;
+  }
+
+  if (msg.type !== "run") {
+    return;
+  }
+
+  var canvas = msg.canvas;
+  ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  gfx.stop();
+  clear("#000");
+
+  try {
+    var fn = new Function("gfx",
+      msg.code +
+      "\\nreturn { draw: typeof draw===\\"function\\" ? draw : null };"
+    );
+    var userInstance = fn(gfx);
+    if (userInstance.draw) {
+      gfx.start(userInstance.draw);
+    }
+    self.postMessage({ type: "started" });
+  } catch (err) {
+    showRuntimeError();
+    self.postMessage({
+      type: "error",
+      text: String(err && err.stack ? err.stack : err)
+    });
+  }
+};
+`;
+
+      let canvas = null;
+      let runnerWorker = null;
+      let runnerUrl = null;
+      let isRunning = false;
+
       const keys = {};
-      window.addEventListener("keydown", e => keys[e.key] = true);
-      window.addEventListener("keyup", e => keys[e.key] = false);
       const mouse = {
         x: 0,
         y: 0,
         left: false
       };
-      canvas.addEventListener("mousemove", e => {
-        const r = canvas.getBoundingClientRect();
-        mouse.x = ((e.clientX - r.left) / SCALE) | 0;
-        mouse.y = ((e.clientY - r.top) / SCALE) | 0;
-      });
-      canvas.addEventListener("mousedown",
-        () => mouse.left = true);
-      canvas.addEventListener("mouseup",
-        () => mouse.left = false);
-      let deltaTime = 0;
-      const gfx = {
-        width: WIDTH,
-        height: HEIGHT,
-        pixel,
-        line,
-        rect,
-        fillRect,
-        circle,
-        fillCircle,
-        clear,
-        text,
-        mouse,
-        deltaTime: 0,
-        keyDown(key) {
-          return !!keys[key];
-        }
-      };
-      let animationId = null;
-      let drawFunction = null;
-      let lastTime = 0;
-      let userInstance = null;
-      gfx.start = function(draw) {
-        drawFunction = draw;
-        if (animationId) {
-          cancelAnimationFrame(animationId);
-        }
-        lastTime = performance.now();
 
-        function frame(time) {
-          deltaTime = (time - lastTime) / 1000;
-          lastTime = time;
-          gfx.deltaTime = deltaTime;
-          if (drawFunction) {
-            drawFunction();
+      function setRunning(running) {
+        isRunning = running;
+        document.getElementById("stopBtn").disabled = !running;
+      }
+
+      function destroyWorker() {
+        if (runnerWorker) {
+          runnerWorker.onmessage = null;
+          runnerWorker.onerror = null;
+          runnerWorker.terminate();
+          runnerWorker = null;
+        }
+        if (runnerUrl) {
+          URL.revokeObjectURL(runnerUrl);
+          runnerUrl = null;
+        }
+      }
+
+      function sendInput() {
+        if (!runnerWorker) return;
+        runnerWorker.postMessage({
+          type: "input",
+          keys: Object.assign({}, keys),
+          mouse: {
+            x: mouse.x,
+            y: mouse.y,
+            left: mouse.left
           }
-          animationId = requestAnimationFrame(frame);
+        });
+      }
+
+      function attachCanvasListeners(el) {
+        el.addEventListener("mousemove", e => {
+          const r = el.getBoundingClientRect();
+          mouse.x = ((e.clientX - r.left) / SCALE) | 0;
+          mouse.y = ((e.clientY - r.top) / SCALE) | 0;
+          sendInput();
+        });
+        el.addEventListener("mousedown", () => {
+          mouse.left = true;
+          sendInput();
+        });
+        el.addEventListener("mouseup", () => {
+          mouse.left = false;
+          sendInput();
+        });
+      }
+
+      function createScreenCanvas() {
+        const container = document.getElementById("canvasContainer");
+        const old = document.getElementById("screen");
+        if (old) {
+          old.remove();
         }
-        animationId = requestAnimationFrame(frame);
-      };
-      gfx.stop = function() {
-        if (animationId) {
-          cancelAnimationFrame(animationId);
-          animationId = null;
+        const el = document.createElement("canvas");
+        el.id = "screen";
+        el.width = WIDTH;
+        el.height = HEIGHT;
+        el.style.width = WIDTH * SCALE + "px";
+        el.style.height = HEIGHT * SCALE + "px";
+        container.appendChild(el);
+        attachCanvasListeners(el);
+        return el;
+      }
+
+      canvas = document.getElementById("screen");
+      canvas.width = WIDTH;
+      canvas.height = HEIGHT;
+      canvas.style.width = WIDTH * SCALE + "px";
+      canvas.style.height = HEIGHT * SCALE + "px";
+      attachCanvasListeners(canvas);
+
+      window.addEventListener("keydown", e => {
+        if (e.key === "Escape" && isRunning) {
+          e.preventDefault();
+          stop();
+          return;
         }
-      };
+        keys[e.key] = true;
+        sendInput();
+      });
+      window.addEventListener("keyup", e => {
+        keys[e.key] = false;
+        sendInput();
+      });
+
+      function stop() {
+        if (!isRunning && !runnerWorker) {
+          return;
+        }
+        destroyWorker();
+        setRunning(false);
+      }
 
       function run() {
-        gfx.stop();
-        clear("#000");
-        try {
-          const code = editor.getValue();
-          const fn = new Function("gfx", `
-            ${code}
-
-            return {
-
-                draw:
-                    typeof draw==="function"
-                    ? draw
-                    : null
-
-            };
-            `);
-          userInstance = fn(gfx);
-          if (userInstance.draw) {
-            gfx.start(userInstance.draw);
-          }
-        } catch (err) {
-          console.error(err);
-          clear("#330000");
-          ctx.fillStyle = "white";
-          ctx.font = "10px monospace";
-          ctx.fillText("Runtime Error", 4, 12);
+        if (!editor) {
+          return;
         }
+
+        destroyWorker();
+
+        canvas = createScreenCanvas();
+        const offscreen = canvas.transferControlToOffscreen();
+        const code = editor.getValue();
+
+        const blob = new Blob([RUNNER_SOURCE], {
+          type: "application/javascript"
+        });
+        runnerUrl = URL.createObjectURL(blob);
+        runnerWorker = new Worker(runnerUrl);
+
+        runnerWorker.onmessage = event => {
+          const msg = event.data;
+          if (msg.type === "error") {
+            console.error(msg.text);
+          }
+        };
+
+        runnerWorker.onerror = err => {
+          console.error(err.message || "Worker error");
+          destroyWorker();
+          setRunning(false);
+        };
+
+        setRunning(true);
+        sendInput();
+        runnerWorker.postMessage({
+          type: "run",
+          canvas: offscreen,
+          code: code
+        }, [offscreen]);
       }
 
     hashProjectLoad().then(result => {
