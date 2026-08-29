@@ -116,6 +116,14 @@ def dot(self, other):
 
 ---
 
+## Images
+
+![Vector 2 image](/pages/codingWiki/articles/images/vector-2d.svg)
+
+---
+
+![Vector 3 image](/pages/codingWiki/articles/images/vector-3d.svg)
+
 ## Uses examples.
 
 * Game development (position, velocity)
@@ -123,9 +131,9 @@ def dot(self, other):
 * Graphics (movement, transformations)
 * UI positioning
 
-__WIP__
+## Code Examples
 
-Code snippets and projects code will be provided later.
+[Vector2F Class](/pages/codeEmulators/pythonEditor.html#Vector2F)
 
 ---
 

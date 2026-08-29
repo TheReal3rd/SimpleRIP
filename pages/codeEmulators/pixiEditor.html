@@ -93,6 +93,7 @@ input[type="file"] {
     flex: 1;
     background: black;
     overflow: hidden;
+    outline: none;
 }
 
 #terminal {
@@ -173,7 +174,7 @@ a.nav:hover {
     <div id="rightSplit">
 
         <div class="panel-title">Game (PixiJS)</div>
-        <div id="gameView"></div>
+        <div id="gameView" tabindex="0" title="Click here for keyboard input"></div>
 
         <div class="panel-title">Console</div>
         <div id="terminal"></div>
@@ -229,31 +230,109 @@ const customConsole = {
     info: function () { self.postMessage({ type: 'console', level: 'info', text: joinArgs(arguments) }); }
 };
 
+var eventListeners = Object.create(null);
+
+function addHostListener(type, fn) {
+    if (typeof fn !== 'function') {
+        return;
+    }
+    if (!eventListeners[type]) {
+        eventListeners[type] = [];
+    }
+    eventListeners[type].push(fn);
+}
+
+function removeHostListener(type, fn) {
+    var list = eventListeners[type];
+    if (!list) {
+        return;
+    }
+    eventListeners[type] = list.filter(function (listener) {
+        return listener !== fn;
+    });
+}
+
+function dispatchHostEvent(type, data) {
+    var list = eventListeners[type];
+    if (!list || !list.length) {
+        return;
+    }
+    var evt = {
+        type: type,
+        key: data.key,
+        code: data.code,
+        keyCode: data.keyCode,
+        which: data.which,
+        ctrlKey: !!data.ctrlKey,
+        shiftKey: !!data.shiftKey,
+        altKey: !!data.altKey,
+        metaKey: !!data.metaKey,
+        repeat: !!data.repeat,
+        preventDefault: function () {},
+        stopPropagation: function () {},
+        stopImmediatePropagation: function () {}
+    };
+    for (var i = 0; i < list.length; i++) {
+        try {
+            list[i].call(self.window, evt);
+        } catch (err) {
+            customConsole.error(err);
+        }
+    }
+}
+
+function createHostWindow(width, height) {
+    return {
+        innerWidth: width,
+        innerHeight: height,
+        devicePixelRatio: 1,
+        addEventListener: addHostListener,
+        removeEventListener: removeHostListener,
+        dispatchEvent: function (evt) {
+            if (evt && evt.type) {
+                dispatchHostEvent(evt.type, evt);
+            }
+            return true;
+        }
+    };
+}
+
+function createHostDocument() {
+    return {
+        createElement: function (tag) {
+            if (tag === 'canvas') {
+                return new OffscreenCanvas(1, 1);
+            }
+            return {};
+        },
+        body: { appendChild: function () {}, removeChild: function () {} },
+        head: { appendChild: function () {} },
+        getElementById: function () { return null; },
+        querySelector: function () { return null; },
+        querySelectorAll: function () { return []; },
+        addEventListener: addHostListener,
+        removeEventListener: removeHostListener
+    };
+}
+
 self.onmessage = async function (event) {
     var msg = event.data;
+
+    if (msg.type === 'input') {
+        dispatchHostEvent(msg.eventType, msg.event || {});
+        return;
+    }
 
     if (msg.type !== 'run') {
         return;
     }
 
-    try {
-        importScripts('https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/dist/pixi.min.js');
+    eventListeners = Object.create(null);
 
-        if (typeof self.document === 'undefined') {
-            self.document = {
-                createElement: function () { return {}; },
-                body: { appendChild: function () {}, removeChild: function () {} },
-                head: { appendChild: function () {} },
-                getElementById: function () { return null; },
-                querySelector: function () { return null; },
-                querySelectorAll: function () { return []; },
-                addEventListener: function () {},
-                removeEventListener: function () {}
-            };
-        }
-        if (typeof self.window === 'undefined') {
-            self.window = self;
-        }
+    try {
+        // Use the webworker build — regular pixi.js cannot create a
+        // renderer against OffscreenCanvas (auto-detect fails in workers).
+        importScripts('https://cdn.jsdelivr.net/npm/@pixi/webworker@7.4.0/dist/webworker.min.js');
 
         var app = new PIXI.Application({
             view: msg.canvas,
@@ -263,12 +342,28 @@ self.onmessage = async function (event) {
             antialias: true
         });
 
+        // User programs often reference browser globals. Workers have no
+        // real window/document, so provide shims that accept forwarded input.
+        self.window = createHostWindow(msg.width, msg.height);
+        self.document = createHostDocument();
+        self.innerWidth = msg.width;
+        self.innerHeight = msg.height;
+        self.devicePixelRatio = 1;
+        self.addEventListener = addHostListener;
+        self.removeEventListener = removeHostListener;
+
+        self.postMessage({ type: 'ready' });
+
         var AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
         var fn = new AsyncFunction(
             'console',
             'PIXI',
             'app',
+            'window',
+            'document',
+            'self',
+            'globalThis',
             'Math',
             'Date',
             'JSON',
@@ -284,6 +379,10 @@ self.onmessage = async function (event) {
             customConsole,
             PIXI,
             app,
+            self.window,
+            self.document,
+            self,
+            self,
             Math,
             Date,
             JSON,
@@ -415,6 +514,65 @@ function clearGameView() {
     document.getElementById('gameView').innerHTML = '';
 }
 
+function isTypingTarget(target) {
+    if (!target || !(target instanceof Element)) {
+        return false;
+    }
+
+    if (target.closest('#editor')) {
+        return true;
+    }
+
+    const tag = target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        return true;
+    }
+
+    return !!target.closest('[contenteditable="true"]');
+}
+
+function forwardKeyEvent(eventType, event) {
+    if (!runnerWorker || !isRunning) {
+        return;
+    }
+
+    if (isTypingTarget(event.target)) {
+        return;
+    }
+
+    // Keep Escape as the IDE stop shortcut.
+    if (event.key === 'Escape' || event.key === 'Esc') {
+        return;
+    }
+
+    runnerWorker.postMessage({
+        type: 'input',
+        eventType,
+        event: {
+            key: event.key,
+            code: event.code,
+            keyCode: event.keyCode,
+            which: event.which,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            altKey: event.altKey,
+            metaKey: event.metaKey,
+            repeat: event.repeat
+        }
+    });
+
+    const gameView = document.getElementById('gameView');
+    if (
+        gameView &&
+        (document.activeElement === gameView || gameView.contains(document.activeElement))
+    ) {
+        const block = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
+        if (block.includes(event.code) || event.key === ' ') {
+            event.preventDefault();
+        }
+    }
+}
+
 function destroyWorker() {
     if (runnerWorker) {
         runnerWorker.onmessage = null;
@@ -434,6 +592,11 @@ function destroyWorker() {
 function handleWorkerMessage(event) {
     const msg = event.data;
 
+    if (msg.type === 'ready') {
+        write('Pixi renderer ready', 'info');
+        return;
+    }
+
     if (msg.type === 'console') {
         write(msg.text, msg.level || 'log');
         return;
@@ -441,6 +604,7 @@ function handleWorkerMessage(event) {
 
     if (msg.type === 'error') {
         write(msg.text, 'error');
+        setRunning(false);
     }
 }
 
@@ -502,7 +666,17 @@ async function runCode() {
         width,
         height
     }, [offscreen]);
+
+    // Focus the game view so WASD/arrows reach the worker, not Monaco.
+    gameView.focus({ preventScroll: true });
 }
+
+window.addEventListener('keydown', (e) => forwardKeyEvent('keydown', e), true);
+window.addEventListener('keyup', (e) => forwardKeyEvent('keyup', e), true);
+
+document.getElementById('gameView').addEventListener('pointerdown', () => {
+    document.getElementById('gameView').focus({ preventScroll: true });
+});
 
 document.getElementById('textFileInput').addEventListener('change', event => {
 

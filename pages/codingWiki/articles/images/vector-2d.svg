@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="575" viewBox="0 0 650 575">
+  <defs>
+    <marker id="arrowHead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#E6EDF3"/>
+    </marker>
+    <marker id="arrowX" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#F85149"/>
+    </marker>
+    <marker id="arrowY" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#3FB950"/>
+    </marker>
+    <style type="text/css"><![CDATA[
+      .title { font: 700 18px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .label { font: 600 14px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .axis-x { font: 700 14px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #F85149; }
+      .axis-y { font: 700 14px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #3FB950; }
+      .mono { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .mono-x { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #F85149; }
+      .mono-y { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #3FB950; }
+      .tick { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #8B949E; }
+      .tick-x { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #F85149; }
+      .tick-y { font: 500 12px 'IBM Plex Mono', Consolas, monospace; fill: #3FB950; }
+      .muted { font: 500 12px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #8B949E; }
+    ]]></style>
+  </defs>
+
+  <!--
+    Origin O = (120, 440) in SVG pixels
+    1 unit = 60 px; +x right, +y up
+    v = <3, 4>
+      tip Px = 120 + 3*60 = 300
+      tip Py = 440 - 4*60 = 200
+    |v| = 5
+  -->
+
+  <rect width="100%" height="100%" fill="#0B0E14"/>
+  <text x="325" y="36" text-anchor="middle" class="title">Vector in 2D space</text>
+
+  <rect x="35" y="51" width="570" height="478" rx="12" fill="#1C2128" stroke="#3A424E" stroke-width="1"/>
+
+  <!-- Unit grid: x = 0..7, y = 0..5 -->
+  <g stroke="#252B33" stroke-width="1">
+    <line x1="120" y1="100" x2="120" y2="480"/>
+    <line x1="180" y1="100" x2="180" y2="480"/>
+    <line x1="240" y1="100" x2="240" y2="480"/>
+    <line x1="300" y1="100" x2="300" y2="480"/>
+    <line x1="360" y1="100" x2="360" y2="480"/>
+    <line x1="420" y1="100" x2="420" y2="480"/>
+    <line x1="480" y1="100" x2="480" y2="480"/>
+    <line x1="540" y1="100" x2="540" y2="480"/>
+    <line x1="70" y1="440" x2="580" y2="440"/>
+    <line x1="70" y1="380" x2="580" y2="380"/>
+    <line x1="70" y1="320" x2="580" y2="320"/>
+    <line x1="70" y1="260" x2="580" y2="260"/>
+    <line x1="70" y1="200" x2="580" y2="200"/>
+    <line x1="70" y1="140" x2="580" y2="140"/>
+  </g>
+
+  <!-- Highlight the x=3 and y=4 grid lines that P sits on -->
+  <line x1="300" y1="100" x2="300" y2="480" stroke="#F85149" stroke-width="1.5" opacity="0.5"/>
+  <line x1="70" y1="200" x2="580" y2="200" stroke="#3FB950" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Axes -->
+  <line x1="70" y1="440" x2="580" y2="440" stroke="#F85149" stroke-width="2.5" marker-end="url(#arrowX)"/>
+  <line x1="120" y1="480" x2="120" y2="110" stroke="#3FB950" stroke-width="2.5" marker-end="url(#arrowY)"/>
+  <text x="568" y="428" class="axis-x">x</text>
+  <text x="132" y="124" class="axis-y">y</text>
+
+  <!-- X ticks: 1..7 at 180,240,300,360,420,480,540 -->
+  <g stroke="#F85149" stroke-width="1.5" opacity="0.85">
+    <line x1="180" y1="434" x2="180" y2="446"/>
+    <line x1="240" y1="434" x2="240" y2="446"/>
+    <line x1="300" y1="434" x2="300" y2="446"/>
+    <line x1="360" y1="434" x2="360" y2="446"/>
+    <line x1="420" y1="434" x2="420" y2="446"/>
+    <line x1="480" y1="434" x2="480" y2="446"/>
+    <line x1="540" y1="434" x2="540" y2="446"/>
+  </g>
+  <text x="180" y="466" text-anchor="middle" class="tick">1</text>
+  <text x="240" y="466" text-anchor="middle" class="tick">2</text>
+  <text x="300" y="466" text-anchor="middle" class="tick-x">3</text>
+  <text x="360" y="466" text-anchor="middle" class="tick">4</text>
+  <text x="420" y="466" text-anchor="middle" class="tick">5</text>
+  <text x="480" y="466" text-anchor="middle" class="tick">6</text>
+  <text x="540" y="466" text-anchor="middle" class="tick">7</text>
+
+  <!-- Y ticks: 1..5 at 380,320,260,200,140 -->
+  <g stroke="#3FB950" stroke-width="1.5" opacity="0.85">
+    <line x1="114" y1="380" x2="126" y2="380"/>
+    <line x1="114" y1="320" x2="126" y2="320"/>
+    <line x1="114" y1="260" x2="126" y2="260"/>
+    <line x1="114" y1="200" x2="126" y2="200"/>
+    <line x1="114" y1="140" x2="126" y2="140"/>
+  </g>
+  <text x="106" y="384" text-anchor="end" class="tick">1</text>
+  <text x="106" y="324" text-anchor="end" class="tick">2</text>
+  <text x="106" y="264" text-anchor="end" class="tick">3</text>
+  <text x="106" y="204" text-anchor="end" class="tick-y">4</text>
+  <text x="106" y="144" text-anchor="end" class="tick">5</text>
+  <text x="106" y="444" text-anchor="end" class="tick">0</text>
+
+  <!-- Foot marks on axes where components meet -->
+  <circle cx="300" cy="440" r="3.5" fill="#F85149"/>
+  <circle cx="120" cy="200" r="3.5" fill="#3FB950"/>
+
+  <!-- Component dashed lines -->
+  <line x1="120" y1="200" x2="300" y2="200" stroke="#F85149" stroke-width="2" stroke-dasharray="6 4"/>
+  <line x1="300" y1="440" x2="300" y2="200" stroke="#3FB950" stroke-width="2" stroke-dasharray="6 4"/>
+
+  <!-- Axis component braces -->
+  <line x1="120" y1="490" x2="300" y2="490" stroke="#F85149" stroke-width="1.5"/>
+  <line x1="120" y1="484" x2="120" y2="496" stroke="#F85149"/>
+  <line x1="300" y1="484" x2="300" y2="496" stroke="#F85149"/>
+  <text x="210" y="512" text-anchor="middle" class="mono-x">x = 3</text>
+
+  <line x1="75" y1="440" x2="75" y2="200" stroke="#3FB950" stroke-width="1.5"/>
+  <line x1="69" y1="440" x2="81" y2="440" stroke="#3FB950"/>
+  <line x1="69" y1="200" x2="81" y2="200" stroke="#3FB950"/>
+  <text x="63" y="328" text-anchor="middle" class="mono-y" transform="rotate(-90 63 328)">y = 4</text>
+
+  <!-- Vector O(120,440) -> P(300,200); dir (180,-240), len=300; shorten 12px -->
+  <line x1="120" y1="440" x2="292.8" y2="209.6" stroke="#E6EDF3" stroke-width="3" marker-end="url(#arrowHead)"/>
+  <circle cx="300" cy="200" r="5" fill="#E6EDF3"/>
+  <text x="312" y="194" class="label">P(3, 4)</text>
+  <text x="178" y="352" class="label">v</text>
+
+  <!-- Legend away from axes -->
+  <rect x="400" y="80" width="168" height="56" rx="8" fill="#252B33" stroke="#3A424E" stroke-width="1"/>
+  <text x="484" y="104" text-anchor="middle" class="mono">v = &lt;3, 4&gt;</text>
+  <text x="484" y="124" text-anchor="middle" class="muted">|v| = 5</text>
+</svg>

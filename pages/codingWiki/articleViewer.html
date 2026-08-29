@@ -52,6 +52,15 @@ a {
 <div id="content">Loading...</div>
 
 <script>
+
+const md404Error = `
+[Home](#home)
+---
+# 404 - Article not found.
+
+Remember the project is still work in progress. 
+`;
+
 function loadArticle() {
   let article = window.location.hash.substring(1);
 
@@ -70,7 +79,7 @@ function loadArticle() {
       document.getElementById('content').innerHTML = marked.parse(md);
     })
     .catch(err => {
-      document.getElementById('content').innerHTML = "<h2>404 - Article not found</h2>";
+      document.getElementById('content').innerHTML = marked.parse(md404Error);
     });
 }
 

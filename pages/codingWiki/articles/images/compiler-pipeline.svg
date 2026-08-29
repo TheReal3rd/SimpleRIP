@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="380" viewBox="0 0 820 380">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#E6EDF3"/>
+    </marker>
+    <style type="text/css"><![CDATA[
+      .title { font: 700 18px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .heading { font: 600 13px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .sub { font: 500 11px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #8B949E; }
+      .code { font: 500 14px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .kw { font: 500 14px 'IBM Plex Mono', Consolas, monospace; fill: #8B949E; }
+      .box-label { font: 700 14px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .hex { font: 500 13px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .asm { font: 500 13px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+    ]]></style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#0B0E14"/>
+  <text x="410" y="34" text-anchor="middle" class="title">Compiler: source to machine code</text>
+
+  <!-- Source panel -->
+  <rect x="28" y="56" width="280" height="292" rx="12" fill="#1C2128" stroke="#3A424E" stroke-width="1"/>
+  <rect x="28" y="56" width="280" height="40" rx="12" fill="#252B33"/>
+  <rect x="28" y="84" width="280" height="12" fill="#252B33"/>
+  <text x="168" y="82" text-anchor="middle" class="heading">Source code</text>
+  <text x="48" y="118" class="sub">add.c</text>
+
+  <text x="48" y="156" class="kw">int</text>
+  <text x="84" y="156" class="code">add(int a, int b)</text>
+  <text x="48" y="186" class="code">{</text>
+  <text x="48" y="216" class="kw">    return</text>
+  <text x="132" y="216" class="code">a + b;</text>
+  <text x="48" y="246" class="code">}</text>
+
+  <text x="48" y="300" class="sub">High-level C source</text>
+
+  <!-- Arrow 1 -->
+  <line x1="320" y1="202" x2="362" y2="202" stroke="#E6EDF3" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Compiler panel -->
+  <rect x="376" y="128" width="128" height="148" rx="12" fill="#1C2128" stroke="#3A424E" stroke-width="1"/>
+  <rect x="376" y="128" width="128" height="40" rx="12" fill="#252B33"/>
+  <rect x="376" y="156" width="128" height="12" fill="#252B33"/>
+  <text x="440" y="154" text-anchor="middle" class="box-label">Compiler</text>
+  <text x="440" y="196" text-anchor="middle" class="sub">lex / parse</text>
+  <text x="440" y="216" text-anchor="middle" class="sub">optimize</text>
+  <text x="440" y="236" text-anchor="middle" class="sub">codegen</text>
+  <text x="440" y="262" text-anchor="middle" class="code">gcc -O0</text>
+
+  <!-- Arrow 2 -->
+  <line x1="516" y1="202" x2="558" y2="202" stroke="#E6EDF3" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Machine code panel -->
+  <rect x="572" y="56" width="220" height="292" rx="12" fill="#1C2128" stroke="#3A424E" stroke-width="1"/>
+  <rect x="572" y="56" width="220" height="40" rx="12" fill="#252B33"/>
+  <rect x="572" y="84" width="220" height="12" fill="#252B33"/>
+  <text x="682" y="82" text-anchor="middle" class="heading">Machine code</text>
+  <text x="592" y="118" class="sub">x86-64  (objdump)</text>
+
+  <text x="592" y="152" class="sub">bytes</text>
+  <text x="668" y="152" class="sub">instruction</text>
+
+  <text x="592" y="184" class="hex">89 f8</text>
+  <text x="668" y="184" class="asm">mov eax, edi</text>
+
+  <text x="592" y="212" class="hex">01 f0</text>
+  <text x="668" y="212" class="asm">add eax, esi</text>
+
+  <text x="592" y="240" class="hex">c3</text>
+  <text x="668" y="240" class="asm">ret</text>
+
+  <text x="592" y="300" class="sub">Binary for the CPU</text>
+</svg>

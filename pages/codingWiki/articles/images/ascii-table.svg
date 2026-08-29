@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="592" height="650" viewBox="0 0 592 650">
+  <defs>
+    <style type="text/css"><![CDATA[
+      .title { font: 700 18px 'IBM Plex Sans', 'Segoe UI', sans-serif; fill: #E6EDF3; }
+      .hdr { font: 600 10px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .cell { font: 500 10px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .ctl { font: 600 9px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+      .ch { font: 600 10px 'IBM Plex Mono', Consolas, monospace; fill: #E6EDF3; }
+    ]]></style>
+  </defs>
+  <rect width="100%" height="100%" fill="#0B0E14"/>
+  <text x="296" y="58" text-anchor="middle" class="title">Ascii table</text>
+  <rect x="40" y="76" width="128" height="534" rx="8" fill="#0B0E14" stroke="#3A424E" stroke-width="1"/>
+  <path d="M40,98 H168 V84 Q168,76 160,76 H48 Q40,76 40,84 Z" fill="#252B33"/>
+  <line x1="40" y1="98" x2="168" y2="98" stroke="#3A424E" stroke-width="1"/>
+  <text x="48" y="91" class="hdr">Dec</text>
+  <text x="82" y="91" class="hdr">Hex</text>
+  <text x="118" y="91" class="hdr">Char</text>
+  <rect x="40" y="98" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="110" class="cell">  0</text><text x="82" y="110" class="cell">00</text><text x="118" y="110" class="ctl">NUL</text>
+  <text x="48" y="126" class="cell">  1</text><text x="82" y="126" class="cell">01</text><text x="118" y="126" class="ctl">SOH</text>
+  <rect x="40" y="130" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="142" class="cell">  2</text><text x="82" y="142" class="cell">02</text><text x="118" y="142" class="ctl">STX</text>
+  <text x="48" y="158" class="cell">  3</text><text x="82" y="158" class="cell">03</text><text x="118" y="158" class="ctl">ETX</text>
+  <rect x="40" y="162" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="174" class="cell">  4</text><text x="82" y="174" class="cell">04</text><text x="118" y="174" class="ctl">EOT</text>
+  <text x="48" y="190" class="cell">  5</text><text x="82" y="190" class="cell">05</text><text x="118" y="190" class="ctl">ENQ</text>
+  <rect x="40" y="194" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="206" class="cell">  6</text><text x="82" y="206" class="cell">06</text><text x="118" y="206" class="ctl">ACK</text>
+  <text x="48" y="222" class="cell">  7</text><text x="82" y="222" class="cell">07</text><text x="118" y="222" class="ctl">BEL</text>
+  <rect x="40" y="226" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="238" class="cell">  8</text><text x="82" y="238" class="cell">08</text><text x="118" y="238" class="ctl">BS</text>
+  <text x="48" y="254" class="cell">  9</text><text x="82" y="254" class="cell">09</text><text x="118" y="254" class="ctl">HT</text>
+  <rect x="40" y="258" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="270" class="cell"> 10</text><text x="82" y="270" class="cell">0A</text><text x="118" y="270" class="ctl">LF</text>
+  <text x="48" y="286" class="cell"> 11</text><text x="82" y="286" class="cell">0B</text><text x="118" y="286" class="ctl">VT</text>
+  <rect x="40" y="290" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="302" class="cell"> 12</text><text x="82" y="302" class="cell">0C</text><text x="118" y="302" class="ctl">FF</text>
+  <text x="48" y="318" class="cell"> 13</text><text x="82" y="318" class="cell">0D</text><text x="118" y="318" class="ctl">CR</text>
+  <rect x="40" y="322" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="334" class="cell"> 14</text><text x="82" y="334" class="cell">0E</text><text x="118" y="334" class="ctl">SO</text>
+  <text x="48" y="350" class="cell"> 15</text><text x="82" y="350" class="cell">0F</text><text x="118" y="350" class="ctl">SI</text>
+  <rect x="40" y="354" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="366" class="cell"> 16</text><text x="82" y="366" class="cell">10</text><text x="118" y="366" class="ctl">DLE</text>
+  <text x="48" y="382" class="cell"> 17</text><text x="82" y="382" class="cell">11</text><text x="118" y="382" class="ctl">DC1</text>
+  <rect x="40" y="386" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="398" class="cell"> 18</text><text x="82" y="398" class="cell">12</text><text x="118" y="398" class="ctl">DC2</text>
+  <text x="48" y="414" class="cell"> 19</text><text x="82" y="414" class="cell">13</text><text x="118" y="414" class="ctl">DC3</text>
+  <rect x="40" y="418" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="430" class="cell"> 20</text><text x="82" y="430" class="cell">14</text><text x="118" y="430" class="ctl">DC4</text>
+  <text x="48" y="446" class="cell"> 21</text><text x="82" y="446" class="cell">15</text><text x="118" y="446" class="ctl">NAK</text>
+  <rect x="40" y="450" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="462" class="cell"> 22</text><text x="82" y="462" class="cell">16</text><text x="118" y="462" class="ctl">SYN</text>
+  <text x="48" y="478" class="cell"> 23</text><text x="82" y="478" class="cell">17</text><text x="118" y="478" class="ctl">ETB</text>
+  <rect x="40" y="482" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="494" class="cell"> 24</text><text x="82" y="494" class="cell">18</text><text x="118" y="494" class="ctl">CAN</text>
+  <text x="48" y="510" class="cell"> 25</text><text x="82" y="510" class="cell">19</text><text x="118" y="510" class="ctl">EM</text>
+  <rect x="40" y="514" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="526" class="cell"> 26</text><text x="82" y="526" class="cell">1A</text><text x="118" y="526" class="ctl">SUB</text>
+  <text x="48" y="542" class="cell"> 27</text><text x="82" y="542" class="cell">1B</text><text x="118" y="542" class="ctl">ESC</text>
+  <rect x="40" y="546" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="558" class="cell"> 28</text><text x="82" y="558" class="cell">1C</text><text x="118" y="558" class="ctl">FS</text>
+  <text x="48" y="574" class="cell"> 29</text><text x="82" y="574" class="cell">1D</text><text x="118" y="574" class="ctl">GS</text>
+  <rect x="40" y="578" width="128" height="16" fill="#1C2128"/>
+  <text x="48" y="590" class="cell"> 30</text><text x="82" y="590" class="cell">1E</text><text x="118" y="590" class="ctl">RS</text>
+  <text x="48" y="606" class="cell"> 31</text><text x="82" y="606" class="cell">1F</text><text x="118" y="606" class="ctl">US</text>
+  <rect x="168" y="76" width="128" height="534" rx="8" fill="#0B0E14" stroke="#3A424E" stroke-width="1"/>
+  <path d="M168,98 H296 V84 Q296,76 288,76 H176 Q168,76 168,84 Z" fill="#252B33"/>
+  <line x1="168" y1="98" x2="296" y2="98" stroke="#3A424E" stroke-width="1"/>
+  <text x="176" y="91" class="hdr">Dec</text>
+  <text x="210" y="91" class="hdr">Hex</text>
+  <text x="246" y="91" class="hdr">Char</text>
+  <rect x="168" y="98" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="110" class="cell"> 32</text><text x="210" y="110" class="cell">20</text><text x="246" y="110" class="ch">SP</text>
+  <text x="176" y="126" class="cell"> 33</text><text x="210" y="126" class="cell">21</text><text x="246" y="126" class="ch">!</text>
+  <rect x="168" y="130" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="142" class="cell"> 34</text><text x="210" y="142" class="cell">22</text><text x="246" y="142" class="ch">&quot;</text>
+  <text x="176" y="158" class="cell"> 35</text><text x="210" y="158" class="cell">23</text><text x="246" y="158" class="ch">#</text>
+  <rect x="168" y="162" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="174" class="cell"> 36</text><text x="210" y="174" class="cell">24</text><text x="246" y="174" class="ch">$</text>
+  <text x="176" y="190" class="cell"> 37</text><text x="210" y="190" class="cell">25</text><text x="246" y="190" class="ch">%</text>
+  <rect x="168" y="194" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="206" class="cell"> 38</text><text x="210" y="206" class="cell">26</text><text x="246" y="206" class="ch">&amp;</text>
+  <text x="176" y="222" class="cell"> 39</text><text x="210" y="222" class="cell">27</text><text x="246" y="222" class="ch">'</text>
+  <rect x="168" y="226" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="238" class="cell"> 40</text><text x="210" y="238" class="cell">28</text><text x="246" y="238" class="ch">(</text>
+  <text x="176" y="254" class="cell"> 41</text><text x="210" y="254" class="cell">29</text><text x="246" y="254" class="ch">)</text>
+  <rect x="168" y="258" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="270" class="cell"> 42</text><text x="210" y="270" class="cell">2A</text><text x="246" y="270" class="ch">*</text>
+  <text x="176" y="286" class="cell"> 43</text><text x="210" y="286" class="cell">2B</text><text x="246" y="286" class="ch">+</text>
+  <rect x="168" y="290" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="302" class="cell"> 44</text><text x="210" y="302" class="cell">2C</text><text x="246" y="302" class="ch">,</text>
+  <text x="176" y="318" class="cell"> 45</text><text x="210" y="318" class="cell">2D</text><text x="246" y="318" class="ch">-</text>
+  <rect x="168" y="322" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="334" class="cell"> 46</text><text x="210" y="334" class="cell">2E</text><text x="246" y="334" class="ch">.</text>
+  <text x="176" y="350" class="cell"> 47</text><text x="210" y="350" class="cell">2F</text><text x="246" y="350" class="ch">/</text>
+  <rect x="168" y="354" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="366" class="cell"> 48</text><text x="210" y="366" class="cell">30</text><text x="246" y="366" class="ch">0</text>
+  <text x="176" y="382" class="cell"> 49</text><text x="210" y="382" class="cell">31</text><text x="246" y="382" class="ch">1</text>
+  <rect x="168" y="386" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="398" class="cell"> 50</text><text x="210" y="398" class="cell">32</text><text x="246" y="398" class="ch">2</text>
+  <text x="176" y="414" class="cell"> 51</text><text x="210" y="414" class="cell">33</text><text x="246" y="414" class="ch">3</text>
+  <rect x="168" y="418" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="430" class="cell"> 52</text><text x="210" y="430" class="cell">34</text><text x="246" y="430" class="ch">4</text>
+  <text x="176" y="446" class="cell"> 53</text><text x="210" y="446" class="cell">35</text><text x="246" y="446" class="ch">5</text>
+  <rect x="168" y="450" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="462" class="cell"> 54</text><text x="210" y="462" class="cell">36</text><text x="246" y="462" class="ch">6</text>
+  <text x="176" y="478" class="cell"> 55</text><text x="210" y="478" class="cell">37</text><text x="246" y="478" class="ch">7</text>
+  <rect x="168" y="482" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="494" class="cell"> 56</text><text x="210" y="494" class="cell">38</text><text x="246" y="494" class="ch">8</text>
+  <text x="176" y="510" class="cell"> 57</text><text x="210" y="510" class="cell">39</text><text x="246" y="510" class="ch">9</text>
+  <rect x="168" y="514" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="526" class="cell"> 58</text><text x="210" y="526" class="cell">3A</text><text x="246" y="526" class="ch">:</text>
+  <text x="176" y="542" class="cell"> 59</text><text x="210" y="542" class="cell">3B</text><text x="246" y="542" class="ch">;</text>
+  <rect x="168" y="546" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="558" class="cell"> 60</text><text x="210" y="558" class="cell">3C</text><text x="246" y="558" class="ch">&lt;</text>
+  <text x="176" y="574" class="cell"> 61</text><text x="210" y="574" class="cell">3D</text><text x="246" y="574" class="ch">=</text>
+  <rect x="168" y="578" width="128" height="16" fill="#1C2128"/>
+  <text x="176" y="590" class="cell"> 62</text><text x="210" y="590" class="cell">3E</text><text x="246" y="590" class="ch">&gt;</text>
+  <text x="176" y="606" class="cell"> 63</text><text x="210" y="606" class="cell">3F</text><text x="246" y="606" class="ch">?</text>
+  <rect x="296" y="76" width="128" height="534" rx="8" fill="#0B0E14" stroke="#3A424E" stroke-width="1"/>
+  <path d="M296,98 H424 V84 Q424,76 416,76 H304 Q296,76 296,84 Z" fill="#252B33"/>
+  <line x1="296" y1="98" x2="424" y2="98" stroke="#3A424E" stroke-width="1"/>
+  <text x="304" y="91" class="hdr">Dec</text>
+  <text x="338" y="91" class="hdr">Hex</text>
+  <text x="374" y="91" class="hdr">Char</text>
+  <rect x="296" y="98" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="110" class="cell"> 64</text><text x="338" y="110" class="cell">40</text><text x="374" y="110" class="ch">@</text>
+  <text x="304" y="126" class="cell"> 65</text><text x="338" y="126" class="cell">41</text><text x="374" y="126" class="ch">A</text>
+  <rect x="296" y="130" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="142" class="cell"> 66</text><text x="338" y="142" class="cell">42</text><text x="374" y="142" class="ch">B</text>
+  <text x="304" y="158" class="cell"> 67</text><text x="338" y="158" class="cell">43</text><text x="374" y="158" class="ch">C</text>
+  <rect x="296" y="162" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="174" class="cell"> 68</text><text x="338" y="174" class="cell">44</text><text x="374" y="174" class="ch">D</text>
+  <text x="304" y="190" class="cell"> 69</text><text x="338" y="190" class="cell">45</text><text x="374" y="190" class="ch">E</text>
+  <rect x="296" y="194" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="206" class="cell"> 70</text><text x="338" y="206" class="cell">46</text><text x="374" y="206" class="ch">F</text>
+  <text x="304" y="222" class="cell"> 71</text><text x="338" y="222" class="cell">47</text><text x="374" y="222" class="ch">G</text>
+  <rect x="296" y="226" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="238" class="cell"> 72</text><text x="338" y="238" class="cell">48</text><text x="374" y="238" class="ch">H</text>
+  <text x="304" y="254" class="cell"> 73</text><text x="338" y="254" class="cell">49</text><text x="374" y="254" class="ch">I</text>
+  <rect x="296" y="258" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="270" class="cell"> 74</text><text x="338" y="270" class="cell">4A</text><text x="374" y="270" class="ch">J</text>
+  <text x="304" y="286" class="cell"> 75</text><text x="338" y="286" class="cell">4B</text><text x="374" y="286" class="ch">K</text>
+  <rect x="296" y="290" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="302" class="cell"> 76</text><text x="338" y="302" class="cell">4C</text><text x="374" y="302" class="ch">L</text>
+  <text x="304" y="318" class="cell"> 77</text><text x="338" y="318" class="cell">4D</text><text x="374" y="318" class="ch">M</text>
+  <rect x="296" y="322" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="334" class="cell"> 78</text><text x="338" y="334" class="cell">4E</text><text x="374" y="334" class="ch">N</text>
+  <text x="304" y="350" class="cell"> 79</text><text x="338" y="350" class="cell">4F</text><text x="374" y="350" class="ch">O</text>
+  <rect x="296" y="354" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="366" class="cell"> 80</text><text x="338" y="366" class="cell">50</text><text x="374" y="366" class="ch">P</text>
+  <text x="304" y="382" class="cell"> 81</text><text x="338" y="382" class="cell">51</text><text x="374" y="382" class="ch">Q</text>
+  <rect x="296" y="386" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="398" class="cell"> 82</text><text x="338" y="398" class="cell">52</text><text x="374" y="398" class="ch">R</text>
+  <text x="304" y="414" class="cell"> 83</text><text x="338" y="414" class="cell">53</text><text x="374" y="414" class="ch">S</text>
+  <rect x="296" y="418" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="430" class="cell"> 84</text><text x="338" y="430" class="cell">54</text><text x="374" y="430" class="ch">T</text>
+  <text x="304" y="446" class="cell"> 85</text><text x="338" y="446" class="cell">55</text><text x="374" y="446" class="ch">U</text>
+  <rect x="296" y="450" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="462" class="cell"> 86</text><text x="338" y="462" class="cell">56</text><text x="374" y="462" class="ch">V</text>
+  <text x="304" y="478" class="cell"> 87</text><text x="338" y="478" class="cell">57</text><text x="374" y="478" class="ch">W</text>
+  <rect x="296" y="482" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="494" class="cell"> 88</text><text x="338" y="494" class="cell">58</text><text x="374" y="494" class="ch">X</text>
+  <text x="304" y="510" class="cell"> 89</text><text x="338" y="510" class="cell">59</text><text x="374" y="510" class="ch">Y</text>
+  <rect x="296" y="514" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="526" class="cell"> 90</text><text x="338" y="526" class="cell">5A</text><text x="374" y="526" class="ch">Z</text>
+  <text x="304" y="542" class="cell"> 91</text><text x="338" y="542" class="cell">5B</text><text x="374" y="542" class="ch">[</text>
+  <rect x="296" y="546" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="558" class="cell"> 92</text><text x="338" y="558" class="cell">5C</text><text x="374" y="558" class="ch">\</text>
+  <text x="304" y="574" class="cell"> 93</text><text x="338" y="574" class="cell">5D</text><text x="374" y="574" class="ch">]</text>
+  <rect x="296" y="578" width="128" height="16" fill="#1C2128"/>
+  <text x="304" y="590" class="cell"> 94</text><text x="338" y="590" class="cell">5E</text><text x="374" y="590" class="ch">^</text>
+  <text x="304" y="606" class="cell"> 95</text><text x="338" y="606" class="cell">5F</text><text x="374" y="606" class="ch">_</text>
+  <rect x="424" y="76" width="128" height="534" rx="8" fill="#0B0E14" stroke="#3A424E" stroke-width="1"/>
+  <path d="M424,98 H552 V84 Q552,76 544,76 H432 Q424,76 424,84 Z" fill="#252B33"/>
+  <line x1="424" y1="98" x2="552" y2="98" stroke="#3A424E" stroke-width="1"/>
+  <text x="432" y="91" class="hdr">Dec</text>
+  <text x="466" y="91" class="hdr">Hex</text>
+  <text x="502" y="91" class="hdr">Char</text>
+  <rect x="424" y="98" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="110" class="cell"> 96</text><text x="466" y="110" class="cell">60</text><text x="502" y="110" class="ch">`</text>
+  <text x="432" y="126" class="cell"> 97</text><text x="466" y="126" class="cell">61</text><text x="502" y="126" class="ch">a</text>
+  <rect x="424" y="130" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="142" class="cell"> 98</text><text x="466" y="142" class="cell">62</text><text x="502" y="142" class="ch">b</text>
+  <text x="432" y="158" class="cell"> 99</text><text x="466" y="158" class="cell">63</text><text x="502" y="158" class="ch">c</text>
+  <rect x="424" y="162" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="174" class="cell">100</text><text x="466" y="174" class="cell">64</text><text x="502" y="174" class="ch">d</text>
+  <text x="432" y="190" class="cell">101</text><text x="466" y="190" class="cell">65</text><text x="502" y="190" class="ch">e</text>
+  <rect x="424" y="194" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="206" class="cell">102</text><text x="466" y="206" class="cell">66</text><text x="502" y="206" class="ch">f</text>
+  <text x="432" y="222" class="cell">103</text><text x="466" y="222" class="cell">67</text><text x="502" y="222" class="ch">g</text>
+  <rect x="424" y="226" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="238" class="cell">104</text><text x="466" y="238" class="cell">68</text><text x="502" y="238" class="ch">h</text>
+  <text x="432" y="254" class="cell">105</text><text x="466" y="254" class="cell">69</text><text x="502" y="254" class="ch">i</text>
+  <rect x="424" y="258" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="270" class="cell">106</text><text x="466" y="270" class="cell">6A</text><text x="502" y="270" class="ch">j</text>
+  <text x="432" y="286" class="cell">107</text><text x="466" y="286" class="cell">6B</text><text x="502" y="286" class="ch">k</text>
+  <rect x="424" y="290" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="302" class="cell">108</text><text x="466" y="302" class="cell">6C</text><text x="502" y="302" class="ch">l</text>
+  <text x="432" y="318" class="cell">109</text><text x="466" y="318" class="cell">6D</text><text x="502" y="318" class="ch">m</text>
+  <rect x="424" y="322" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="334" class="cell">110</text><text x="466" y="334" class="cell">6E</text><text x="502" y="334" class="ch">n</text>
+  <text x="432" y="350" class="cell">111</text><text x="466" y="350" class="cell">6F</text><text x="502" y="350" class="ch">o</text>
+  <rect x="424" y="354" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="366" class="cell">112</text><text x="466" y="366" class="cell">70</text><text x="502" y="366" class="ch">p</text>
+  <text x="432" y="382" class="cell">113</text><text x="466" y="382" class="cell">71</text><text x="502" y="382" class="ch">q</text>
+  <rect x="424" y="386" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="398" class="cell">114</text><text x="466" y="398" class="cell">72</text><text x="502" y="398" class="ch">r</text>
+  <text x="432" y="414" class="cell">115</text><text x="466" y="414" class="cell">73</text><text x="502" y="414" class="ch">s</text>
+  <rect x="424" y="418" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="430" class="cell">116</text><text x="466" y="430" class="cell">74</text><text x="502" y="430" class="ch">t</text>
+  <text x="432" y="446" class="cell">117</text><text x="466" y="446" class="cell">75</text><text x="502" y="446" class="ch">u</text>
+  <rect x="424" y="450" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="462" class="cell">118</text><text x="466" y="462" class="cell">76</text><text x="502" y="462" class="ch">v</text>
+  <text x="432" y="478" class="cell">119</text><text x="466" y="478" class="cell">77</text><text x="502" y="478" class="ch">w</text>
+  <rect x="424" y="482" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="494" class="cell">120</text><text x="466" y="494" class="cell">78</text><text x="502" y="494" class="ch">x</text>
+  <text x="432" y="510" class="cell">121</text><text x="466" y="510" class="cell">79</text><text x="502" y="510" class="ch">y</text>
+  <rect x="424" y="514" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="526" class="cell">122</text><text x="466" y="526" class="cell">7A</text><text x="502" y="526" class="ch">z</text>
+  <text x="432" y="542" class="cell">123</text><text x="466" y="542" class="cell">7B</text><text x="502" y="542" class="ch">{</text>
+  <rect x="424" y="546" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="558" class="cell">124</text><text x="466" y="558" class="cell">7C</text><text x="502" y="558" class="ch">|</text>
+  <text x="432" y="574" class="cell">125</text><text x="466" y="574" class="cell">7D</text><text x="502" y="574" class="ch">}</text>
+  <rect x="424" y="578" width="128" height="16" fill="#1C2128"/>
+  <text x="432" y="590" class="cell">126</text><text x="466" y="590" class="cell">7E</text><text x="502" y="590" class="ch">~</text>
+  <text x="432" y="606" class="cell">127</text><text x="466" y="606" class="cell">7F</text><text x="502" y="606" class="ctl">DEL</text>
+</svg>

@@ -51,9 +51,8 @@ is represented in ASCII as:
 ```
 ---
 
-```markdown
-![ASCII Character Table](https://example.com/images/ascii-table.png)
-```
+![ASCII Character Table](/pages/codingWiki/articles/images/ascii-table.svg)
+
 ---
 
 ## Note
