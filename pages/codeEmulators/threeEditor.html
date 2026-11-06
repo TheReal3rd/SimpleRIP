@@ -64,6 +64,18 @@ button {
     flex: 1;
     border: none;
     background: black;
+    display: block;
+    min-height: 0;
+    outline: none;
+}
+
+#preview-panel:focus {
+    outline: none;
+}
+
+#preview-panel:focus #preview {
+    outline: 1px solid #4c6ef5;
+    outline-offset: -1px;
 }
 
 a.nav {
@@ -89,7 +101,7 @@ a.nav:hover {
     <div style="display:flex; gap:10px;">
         <button onclick="saveProject()">Save</button>
         <button onclick="stopCode()">Stop ■</button>
-        <button onclick="runCode()">Run ▶</button>
+        <button onclick="runCode(true)">Run ▶</button>
     </div>
 </header>
 
@@ -100,7 +112,7 @@ a.nav:hover {
         <div id="editor"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="preview-panel" title="Click the preview, then use the keyboard">
         <div class="title">3D Preview</div>
         <canvas id="preview"></canvas>
     </div>
@@ -112,15 +124,307 @@ let editor;
 let runnerWorker = null;
 let runnerUrl = null;
 let isRunning = false;
+let pressedKeys = new Map();
+
+const CODE_TO_KEY = {
+    Backspace: 8, Tab: 9, Enter: 13, NumpadEnter: 13,
+    ShiftLeft: 16, ShiftRight: 16,
+    ControlLeft: 17, ControlRight: 17,
+    AltLeft: 18, AltRight: 18,
+    Pause: 19, CapsLock: 20, Escape: 27, Space: 32,
+    PageUp: 33, PageDown: 34, End: 35, Home: 36,
+    ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
+    Insert: 45, Delete: 46,
+    MetaLeft: 91, MetaRight: 92, ContextMenu: 93,
+    Numpad0: 96, Numpad1: 97, Numpad2: 98, Numpad3: 99, Numpad4: 100,
+    Numpad5: 101, Numpad6: 102, Numpad7: 103, Numpad8: 104, Numpad9: 105,
+    NumpadMultiply: 106, NumpadAdd: 107, NumpadSubtract: 109,
+    NumpadDecimal: 110, NumpadDivide: 111,
+    F1: 112, F2: 113, F3: 114, F4: 115, F5: 116, F6: 117,
+    F7: 118, F8: 119, F9: 120, F10: 121, F11: 122, F12: 123,
+    Semicolon: 186, Equal: 187, Comma: 188, Minus: 189,
+    Period: 190, Slash: 191, Backquote: 192,
+    BracketLeft: 219, Backslash: 220, BracketRight: 221, Quote: 222
+};
 
 const RUNNER_SOURCE = `
 'use strict';
 
-self.onmessage = function (event) {
+var emitKeyboard = function () {};
+var uiStores = new WeakMap();
+var uiHandlers = new WeakMap();
+
+function reportError(err) {
+    self.postMessage({
+        type: 'error',
+        text: (err && err.stack) ? err.stack : String(err)
+    });
+}
+
+function isKeyType(type) {
+    return type === 'keydown' || type === 'keyup' || type === 'keypress';
+}
+
+function listenerOptions(options) {
+    if (options === true) return { capture: true, once: false };
+    if (options && typeof options === 'object') {
+        return { capture: !!options.capture, once: !!options.once };
+    }
+    return { capture: false, once: false };
+}
+
+function addKeyListener(store, type, fn, options) {
+    if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return;
+    var opts = listenerOptions(options);
+    store.push({ type: type, fn: fn, capture: opts.capture, once: opts.once, removed: false });
+}
+
+function removeKeyListener(store, type, fn, options) {
+    var capture = listenerOptions(options).capture;
+    for (var i = store.length - 1; i >= 0; i--) {
+        var entry = store[i];
+        if (entry.type === type && entry.fn === fn && entry.capture === capture) {
+            entry.removed = true;
+            store.splice(i, 1);
+        }
+    }
+}
+
+function callKeyListener(fn, currentTarget, event) {
+    if (typeof fn === 'function') fn.call(currentTarget, event);
+    else fn.handleEvent.call(fn, event);
+}
+
+function assignMethod(target, name, fn) {
+    try {
+        Object.defineProperty(target, name, {
+            value: fn,
+            configurable: true,
+            writable: true
+        });
+        return true;
+    } catch (err) {
+        try {
+            target[name] = fn;
+            return true;
+        } catch (err2) {
+            return false;
+        }
+    }
+}
+
+function enableUiEvents(target) {
+    if (!target || uiStores.has(target)) return;
+
+    var store = [];
+    var handlers = {};
+    var nativeAdd = typeof target.addEventListener === 'function' ? target.addEventListener.bind(target) : null;
+    var nativeRemove = typeof target.removeEventListener === 'function' ? target.removeEventListener.bind(target) : null;
+
+    var added = assignMethod(target, 'addEventListener', function (type, fn, options) {
+        if (isKeyType(type)) {
+            addKeyListener(store, type, fn, options);
+            return;
+        }
+        if (nativeAdd) nativeAdd(type, fn, options);
+    });
+    var removed = assignMethod(target, 'removeEventListener', function (type, fn, options) {
+        if (isKeyType(type)) {
+            removeKeyListener(store, type, fn, options);
+            return;
+        }
+        if (nativeRemove) nativeRemove(type, fn, options);
+    });
+
+    if (!added || !removed) return;
+
+    uiStores.set(target, store);
+    uiHandlers.set(target, handlers);
+
+    ['keydown', 'keyup', 'keypress'].forEach(function (type) {
+        try {
+            Object.defineProperty(target, 'on' + type, {
+                configurable: true,
+                enumerable: true,
+                get: function () { return handlers[type] || null; },
+                set: function (value) {
+                    handlers[type] = typeof value === 'function' ? value : null;
+                }
+            });
+        } catch (err) {}
+    });
+}
+
+function createDomStub() {
+    var el = {
+        style: {},
+        appendChild: function (child) { return child; },
+        removeChild: function (child) { return child; },
+        setAttribute: function () {},
+        getAttribute: function () { return null; }
+    };
+    enableUiEvents(el);
+    return el;
+}
+
+function createDocument(canvas) {
+    var doc = {
+        createElement: function (tag) {
+            if (String(tag).toLowerCase() === 'canvas') return canvas;
+            return createDomStub();
+        },
+        createElementNS: function (_ns, tag) {
+            return doc.createElement(tag);
+        },
+        getElementById: function () { return null; },
+        querySelector: function () { return null; },
+        querySelectorAll: function () { return []; },
+        hasFocus: function () { return true; }
+    };
+    doc.body = createDomStub();
+    doc.head = createDomStub();
+    doc.documentElement = createDomStub();
+    doc.defaultView = self;
+    enableUiEvents(doc);
+    try {
+        Object.defineProperty(doc, 'activeElement', {
+            configurable: true,
+            get: function () { return canvas; }
+        });
+    } catch (err) {}
+    return doc;
+}
+
+function dispatchOn(target, event, capture) {
+    var store = uiStores.get(target);
+    if (!store) return;
+    event.currentTarget = target;
+    var list = store.filter(function (entry) {
+        return entry.type === event.type && entry.capture === capture;
+    });
+    for (var i = 0; i < list.length; i++) {
+        if (event._immediateStopped) return;
+        var entry = list[i];
+        if (entry.removed) continue;
+        if (entry.once) removeKeyListener(store, entry.type, entry.fn, entry.capture);
+        try {
+            callKeyListener(entry.fn, target, event);
+        } catch (err) {
+            reportError(err);
+        }
+    }
+    if (capture || event._immediateStopped) return;
+    var handlers = uiHandlers.get(target) || {};
+    var handler = handlers[event.type];
+    if (typeof handler === 'function') {
+        try {
+            handler.call(target, event);
+        } catch (err) {
+            reportError(err);
+        }
+    }
+}
+
+function createKeyboardEmitter(canvas, document) {
+    enableUiEvents(canvas);
+    var chain = [];
+    function push(node) {
+        if (node && chain.indexOf(node) === -1) chain.push(node);
+    }
+    push(canvas);
+    push(document.body);
+    push(document.documentElement);
+    push(document);
+    push(self);
+
+    return function emit(data) {
+        if (!data || !isKeyType(data.eventType)) return;
+        var event = {
+            type: data.eventType,
+            key: data.key == null ? '' : String(data.key),
+            code: data.code == null ? '' : String(data.code),
+            keyCode: data.keyCode || 0,
+            which: data.which || data.keyCode || 0,
+            charCode: data.charCode || 0,
+            location: data.location || 0,
+            repeat: !!data.repeat,
+            shiftKey: !!data.shiftKey,
+            ctrlKey: !!data.ctrlKey,
+            altKey: !!data.altKey,
+            metaKey: !!data.metaKey,
+            bubbles: true,
+            cancelable: true,
+            defaultPrevented: false,
+            cancelBubble: false,
+            isTrusted: false,
+            target: canvas,
+            currentTarget: null,
+            eventPhase: 0,
+            timeStamp: typeof data.timeStamp === 'number' ? data.timeStamp : Date.now(),
+            _stopped: false,
+            _immediateStopped: false,
+            preventDefault: function () {
+                this.defaultPrevented = true;
+            },
+            stopPropagation: function () {
+                this._stopped = true;
+                this.cancelBubble = true;
+            },
+            stopImmediatePropagation: function () {
+                this._stopped = true;
+                this._immediateStopped = true;
+                this.cancelBubble = true;
+            },
+            getModifierState: function (name) {
+                if (name === 'Shift') return this.shiftKey;
+                if (name === 'Control') return this.ctrlKey;
+                if (name === 'Alt') return this.altKey;
+                if (name === 'Meta') return this.metaKey;
+                return false;
+            }
+        };
+
+        var c;
+        for (c = chain.length - 1; c >= 1; c--) {
+            event.eventPhase = 1;
+            dispatchOn(chain[c], event, true);
+            if (event._stopped) {
+                event.currentTarget = null;
+                return;
+            }
+        }
+
+        event.eventPhase = 2;
+        dispatchOn(chain[0], event, true);
+        if (!event._immediateStopped) dispatchOn(chain[0], event, false);
+        if (event._stopped) {
+            event.currentTarget = null;
+            return;
+        }
+
+        for (c = 1; c < chain.length; c++) {
+            event.eventPhase = 3;
+            dispatchOn(chain[c], event, false);
+            if (event._stopped) break;
+        }
+        event.currentTarget = null;
+    };
+}
+
+self.addEventListener('message', function (event) {
     var msg = event.data;
-    if (!msg || msg.type !== 'run') {
+    if (!msg) return;
+
+    if (msg.type === 'key') {
+        try {
+            emitKeyboard(msg);
+        } catch (err) {
+            reportError(err);
+        }
         return;
     }
+
+    if (msg.type !== 'run') return;
 
     var canvas = msg.canvas;
     var width = msg.width || 1;
@@ -140,47 +444,13 @@ self.onmessage = function (event) {
             get: function () { return height; }
         });
 
-        var noopEl = {
-            style: {},
-            appendChild: function (el) { return el; },
-            removeChild: function (el) { return el; },
-            setAttribute: function () {},
-            getAttribute: function () { return null; },
-            addEventListener: function () {},
-            removeEventListener: function () {}
-        };
+        enableUiEvents(self);
 
-        self.document = {
-            body: noopEl,
-            head: noopEl,
-            documentElement: noopEl,
-            createElement: function (tag) {
-                if (String(tag).toLowerCase() === 'canvas') {
-                    return canvas;
-                }
-                return {
-                    style: {},
-                    appendChild: function (el) { return el; },
-                    removeChild: function (el) { return el; },
-                    setAttribute: function () {},
-                    getAttribute: function () { return null; },
-                    addEventListener: function () {},
-                    removeEventListener: function () {}
-                };
-            },
-            createElementNS: function (_ns, tag) {
-                return self.document.createElement(tag);
-            },
-            getElementById: function () { return null; },
-            querySelector: function () { return null; },
-            querySelectorAll: function () { return []; },
-            addEventListener: function () {},
-            removeEventListener: function () {}
-        };
+        var doc = createDocument(canvas);
+        self.document = doc;
 
         importScripts(threeUrl);
 
-        // OffscreenCanvas has no DOM style; Three's setSize writes style.width/height by default.
         if (!canvas.style) {
             try {
                 Object.defineProperty(canvas, 'style', {
@@ -196,7 +466,6 @@ self.onmessage = function (event) {
         var OrigWebGLRenderer = THREE.WebGLRenderer;
         var origSetSize = OrigWebGLRenderer.prototype.setSize;
         OrigWebGLRenderer.prototype.setSize = function (w, h, updateStyle) {
-            // Never touch domElement.style in a worker (OffscreenCanvas has none).
             return origSetSize.call(this, w, h, false);
         };
 
@@ -212,14 +481,12 @@ self.onmessage = function (event) {
             THREE.WebGLRenderer[key] = OrigWebGLRenderer[key];
         });
 
+        emitKeyboard = createKeyboardEmitter(canvas, doc);
         (0, eval)(code);
     } catch (err) {
-        self.postMessage({
-            type: 'error',
-            text: (err && err.stack) ? err.stack : String(err)
-        });
+        reportError(err);
     }
-};
+});
 `;
 
 window.MonacoEnvironment = {
@@ -254,6 +521,8 @@ function saveProject() {
 }
 
 function destroyWorker() {
+    pressedKeys.clear();
+
     if (runnerWorker) {
         runnerWorker.onmessage = null;
         runnerWorker.onerror = null;
@@ -285,7 +554,133 @@ function stopCode() {
     resetPreviewCanvas();
 }
 
-function runCode() {
+function legacyKeyCode(event) {
+    if (typeof event.keyCode === 'number' && event.keyCode > 0) return event.keyCode;
+
+    const code = event.code || '';
+    if (code.length === 4 && code.slice(0, 3) === 'Key') return code.charCodeAt(3);
+    if (code.length === 6 && code.slice(0, 5) === 'Digit') return code.charCodeAt(5);
+    if (CODE_TO_KEY[code]) return CODE_TO_KEY[code];
+
+    if (event.key && event.key.length === 1) {
+        if (event.key === ' ') return 32;
+        const upper = event.key.toUpperCase().charCodeAt(0);
+        if (upper >= 48 && upper <= 57) return upper;
+        if (upper >= 65 && upper <= 90) return upper;
+    }
+
+    if (typeof event.which === 'number' && event.which > 0 && event.type !== 'keypress') {
+        return event.which;
+    }
+    return 0;
+}
+
+function keyMessage(event) {
+    const keyCode = legacyKeyCode(event);
+    const charCode = event.type === 'keypress'
+        ? (event.charCode || (event.key && event.key.length === 1 ? event.key.charCodeAt(0) : keyCode))
+        : 0;
+    const which = event.type === 'keypress'
+        ? (event.which || charCode || keyCode)
+        : (event.which || keyCode);
+
+    return {
+        type: 'key',
+        eventType: event.type,
+        key: event.key,
+        code: event.code,
+        keyCode: keyCode,
+        which: which,
+        charCode: charCode,
+        location: event.location || 0,
+        repeat: !!event.repeat,
+        shiftKey: !!event.shiftKey,
+        ctrlKey: !!event.ctrlKey,
+        altKey: !!event.altKey,
+        metaKey: !!event.metaKey,
+        timeStamp: event.timeStamp
+    };
+}
+
+function postToRunner(payload) {
+    if (!runnerWorker || !isRunning) return;
+    try {
+        runnerWorker.postMessage(payload);
+    } catch (err) {
+        // The worker was already stopped.
+    }
+}
+
+function releaseKeys() {
+    pressedKeys.forEach(function (payload) {
+        postToRunner(Object.assign({}, payload, {
+            eventType: 'keyup',
+            repeat: false
+        }));
+    });
+    pressedKeys.clear();
+}
+
+function onPreviewKey(event) {
+    if (!isRunning || !runnerWorker) return;
+    if (event.key === 'Escape' || event.key === 'Esc') return;
+
+    const payload = keyMessage(event);
+    const id = event.code || event.key || '';
+    if (event.type === 'keydown' && id) pressedKeys.set(id, payload);
+    if (event.type === 'keyup' && id) pressedKeys.delete(id);
+    postToRunner(payload);
+
+    if (event.type === 'keydown' && (
+        event.key === ' ' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowLeft' ||
+        event.key === 'ArrowRight' ||
+        event.key === 'PageUp' ||
+        event.key === 'PageDown' ||
+        event.key === 'Home' ||
+        event.key === 'End'
+    )) {
+        event.preventDefault();
+    }
+}
+
+function focusPreview() {
+    const panel = document.getElementById('preview-panel');
+    if (!panel) return;
+    try {
+        panel.focus({ preventScroll: true });
+    } catch (err) {
+        panel.focus();
+    }
+}
+
+function installPreviewKeys() {
+    const panel = document.getElementById('preview-panel');
+    if (!panel || panel.dataset.keysBound === '1') return;
+    panel.dataset.keysBound = '1';
+    panel.tabIndex = 0;
+
+    panel.addEventListener('pointerdown', function () {
+        focusPreview();
+    });
+    panel.addEventListener('keydown', onPreviewKey);
+    panel.addEventListener('keyup', onPreviewKey);
+    panel.addEventListener('keypress', onPreviewKey);
+    panel.addEventListener('blur', function (event) {
+        if (event.relatedTarget && panel.contains(event.relatedTarget)) return;
+        releaseKeys();
+    });
+
+    // Clicking the editor (or anything outside the preview) releases held keys.
+    document.addEventListener('pointerdown', function (event) {
+        if (panel.contains(event.target)) return;
+        releaseKeys();
+    }, true);
+}
+
+function runCode(focusAfterStart) {
     if (!editor) {
         return;
     }
@@ -342,6 +737,8 @@ function runCode() {
             code: code,
             threeUrl: threeUrl
         }, [offscreen]);
+
+        if (focusAfterStart) focusPreview();
     });
 }
 
@@ -427,6 +824,9 @@ window.addEventListener('keydown', function (e) {
         stopCode();
     }
 });
+
+window.addEventListener('blur', releaseKeys);
+installPreviewKeys();
 </script>
 
 </body>
