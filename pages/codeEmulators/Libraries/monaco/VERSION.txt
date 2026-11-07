@@ -1,0 +1,3 @@
+monaco-editor 0.52.2
+Vendored from npm package monaco-editor (min/vs build).
+License: MIT — see https://github.com/microsoft/monaco-editor

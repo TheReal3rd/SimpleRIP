@@ -635,8 +635,8 @@
             return;
         }
 
-        var origin = new URL("./", window.location.href).href;
-        runnerWorker = new Worker(new URL("runtime/runner.js", window.location.href).href);
+        var libBase = new URL("/pages/codeEmulators/Libraries/", window.location.origin).href;
+        runnerWorker = new Worker(new URL("runner.js", libBase).href);
         runnerWorker.onmessage = handleWorkerMessage;
         runnerWorker.onerror = function (err) {
             writeOut((err.message || "The pygame runner stopped.") + "\n", "error");
@@ -652,15 +652,15 @@
             images: payload.images,
             fonts: payload.fonts,
             audio: payload.audio,
-            skulptMin: origin + "vendor/skulpt/skulpt.min.js",
-            skulptStdlib: origin + "vendor/skulpt/skulpt-stdlib.js",
-            pygameHost: origin + "runtime/pygame_host.js",
+            skulptMin: libBase + "skulpt.min.js",
+            skulptStdlib: libBase + "skulpt-stdlib.js",
+            pygameHost: libBase + "pygame_host.js",
         };
         runnerWorker.postMessage(message, [offscreen].concat(payload.transfers));
     }
 
     async function loadSample(name) {
-        var response = await fetch("samples/" + name + ".py");
+        var response = await fetch("PyGameSamples/"+ name + ".py");
         if (!response.ok) throw new Error("Sample not found");
         return response.text();
     }
@@ -731,15 +731,15 @@
         }
     });
 
-    var monacoRoot = new URL("vendor/monaco/", window.location.href).href;
-    var monacoVs = new URL("vendor/monaco/vs/", window.location.href).href;
+    var monacoRoot = new URL("/pages/codeEmulators/Libraries/monaco/", window.location.origin).href;
+    var monacoVs = new URL("/pages/codeEmulators/Libraries/monaco/vs/", window.location.origin).href;
     window.MonacoEnvironment = {
         getWorkerUrl: function () {
             var source = "self.MonacoEnvironment={baseUrl:" + JSON.stringify(monacoRoot) + "};importScripts(" + JSON.stringify(monacoVs + "base/worker/workerMain.js") + ");";
             return "data:text/javascript;charset=utf-8," + encodeURIComponent(source);
         },
     };
-    require.config({ paths: { vs: "vendor/monaco/vs" } });
+    require.config({ paths: { vs: "/pages/codeEmulators/Libraries/monaco/vs" } });
 
     var initial = window.location.hash.replace(/^#/, "") || "playground";
     loadSample(initial).then(function (code) {

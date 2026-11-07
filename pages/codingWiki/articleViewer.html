@@ -53,13 +53,13 @@ a {
 
 <script>
 
-const md404Error = `
+const md404Error = marked.parse(`
 [Home](#home)
 ---
 # 404 - Article not found.
 
 Remember the project is still work in progress. 
-`;
+`);
 
 function loadArticle() {
   let article = window.location.hash.substring(1);
@@ -76,10 +76,11 @@ function loadArticle() {
       return res.text();
     })
     .then(md => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById('content').innerHTML = marked.parse(md);
     })
     .catch(err => {
-      document.getElementById('content').innerHTML = marked.parse(md404Error);
+      document.getElementById('content').innerHTML = md404Error
     });
 }
 

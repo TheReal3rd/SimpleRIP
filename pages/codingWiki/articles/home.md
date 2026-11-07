@@ -1,3 +1,5 @@
+[Simple.rip](/)
+
 # Simple Coding Wiki Home
 
 This is a simple wiki site thats dedicated to provide basic coding help.
