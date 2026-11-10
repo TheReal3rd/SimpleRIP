@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Pygame Web IDE</title>
-<link rel="stylesheet" href="/pages/codeEmulators/Libraries/monaco/vs/editor/editor.main.css">
-<script src="/pages/codeEmulators/Libraries/monaco/vs/loader.js"></script>
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
 <style>
 :root {
     color-scheme: dark;
@@ -140,7 +139,13 @@ input.terminal-input {
     padding: 0 2px;
     color: #ffb4b4;
 }
-
+a.link {
+    color: #7bdff2;
+    text-decoration: none;
+}
+a.link:hover {
+    text-decoration: underline;
+}
 @media (max-width: 900px) {
     header { align-items: flex-start; flex-direction: column; }
     .tools { justify-content: flex-start; }
@@ -154,8 +159,7 @@ input.terminal-input {
 <body>
 <header>
     <div class="brand">
-        <strong>Pygame Web IDE</strong>
-        <span class="hint">Python and pygame stay in this browser</span>
+        <p>Pygame Web IDE <a class="link" href="/index.html">Simple.rip</a> </p>
     </div>
     <div class="tools">
         <label class="file">Sample
@@ -177,7 +181,7 @@ input.terminal-input {
         <div id="editor"></div>
     </div>
     <div class="panel">
-        <div class="title"><span>Window</span><span>Click it, then use the keyboard</span></div>
+        <div class="title"><span>Window</span></div>
         <div id="assetList"></div>
         <div id="stage">
             <div id="window">

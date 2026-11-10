@@ -731,15 +731,14 @@
         }
     });
 
-    var monacoRoot = new URL("/pages/codeEmulators/Libraries/monaco/", window.location.origin).href;
-    var monacoVs = new URL("/pages/codeEmulators/Libraries/monaco/vs/", window.location.origin).href;
     window.MonacoEnvironment = {
         getWorkerUrl: function () {
-            var source = "self.MonacoEnvironment={baseUrl:" + JSON.stringify(monacoRoot) + "};importScripts(" + JSON.stringify(monacoVs + "base/worker/workerMain.js") + ");";
-            return "data:text/javascript;charset=utf-8," + encodeURIComponent(source);
+            return "data:text/javascript;charset=utf-8," +
+                "self.MonacoEnvironment={baseUrl:'https://unpkg.com/monaco-editor@latest/min/'};" +
+                "importScripts('https://unpkg.com/monaco-editor@latest/min/vs/base/worker/workerMain.js');";
         },
     };
-    require.config({ paths: { vs: "/pages/codeEmulators/Libraries/monaco/vs" } });
+    require.config({ paths: { vs: "https://unpkg.com/monaco-editor@latest/min/vs" } });
 
     var initial = window.location.hash.replace(/^#/, "") || "playground";
     loadSample(initial).then(function (code) {
